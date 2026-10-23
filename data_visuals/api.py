@@ -21,6 +21,8 @@ from data_visuals.utils.colors import get_color_preset
 def _default_title(kind: str, declaration: dict[str, Any], index: int, count: int) -> str:
     if kind == "histogram":
         metric = declaration.get("x", "")
+    elif kind in {"pie", "donut"}:
+        metric = declaration.get("value") or declaration.get("group", "")
     elif kind == "heatmap":
         metric = declaration.get("value", "")
     elif kind == "confusion":
@@ -52,7 +54,10 @@ def plot(
 
     Each entry in ``plots`` is one panel, in reading order. ``kind`` selects
     an existing chart type; ``metric`` selects its measured column (``y`` for
-    bar/line/box/scatter, ``x`` for histogram, ``value`` for heatmap/confusion).
+    bar/line/box/scatter/radar, ``x`` for histogram, and ``value`` for
+    heatmap/confusion/pie/donut). Pie/donut require ``group`` and sum their
+    values per category; omit ``metric``/``value`` to count rows. Radar uses
+    ``x`` for metric names and requires every series to contain all metrics.
     Native chart mappings and options are also accepted in the entry.
     ``palette`` optionally selects an original curated combination, such as
     ``curated-5-default``, independently of typography and layout style.
@@ -60,8 +65,8 @@ def plot(
     order, and spacing in points; ``False`` hides legends. Individual entries
     can override these fields through ``chart_opts={'legend': {...}}``.
 
-    Global ``x`` and ``group`` are defaults for bar/line/box/scatter. Histogram
-    inherits only ``group``; matrix plots require explicit axes. An entry can
+    Global ``x`` and ``group`` are defaults for bar/line/box/scatter/radar.
+    Pie/donut and histogram inherit only ``group``; matrix plots require explicit axes. An entry can
     override a default, including ``group=None`` to turn grouping off.
 
     ``canvas`` sets final physical dimensions, e.g. ``{'width': 180,
@@ -103,13 +108,13 @@ def plot(
             raise ValueError(f"plots[{index}]: {error}") from error
 
         if "metric" in declaration:
-            target = "x" if kind == "histogram" else "value" if kind in {"heatmap", "confusion"} else "y"
+            target = "x" if kind == "histogram" else "value" if kind in {"heatmap", "confusion", "pie", "donut"} else "y"
             if target in declaration:
                 raise ValueError(f"plots[{index}] 的 metric 与 {target} 重复，请只指定其中一个。")
             declaration[target] = declaration.pop("metric")
-        if kind in {"bar", "line", "box", "scatter"} and x is not None:
+        if kind in {"bar", "line", "box", "scatter", "radar"} and x is not None:
             declaration.setdefault("x", x)
-        if "group" in chart.optional_fields and group is not None:
+        if "group" in (set(chart.required_fields) | set(chart.optional_fields)) and group is not None:
             declaration.setdefault("group", group)
         if "title" not in declaration:
             declaration["title"] = _default_title(kind, declaration, index, len(plots))

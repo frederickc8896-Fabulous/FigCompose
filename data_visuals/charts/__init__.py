@@ -17,6 +17,10 @@ charts/ — 图表类型定义层
     - scatter  — 散点图
     - box      — 箱线图
     - heatmap  — 热力图
+    - histogram — 直方图
+    - confusion — 混淆矩阵
+    - pie / donut — 饼图与环形图
+    - radar — 雷达图
 """
 
 from __future__ import annotations
@@ -29,7 +33,7 @@ import pandas as pd
 
 # ── 图表类型枚举 ──────────────────────────────────────────────
 
-ChartType = str  # "bar" | "line" | "scatter" | "box" | "heatmap"
+ChartType = str  # Names are resolved through the chart registry below.
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -225,7 +229,7 @@ def get_chart(chart_type: str) -> Type[ChartSpec]:
     Parameters
     ----------
     chart_type : str
-        图表类型名称: "bar" | "line" | "scatter" | "box" | "heatmap"
+        图表类型名称，可通过 list_chart_types() 查询。
 
     Returns
     -------
@@ -280,6 +284,12 @@ def create_chart(
     """
     cls = get_chart(chart_type)
 
+    if chart_type in {"pie", "donut"} and ("x" in mapping or "y" in mapping):
+        raise ValueError(
+            f"[{chart_type}] 饼图使用 group='类别列' 和 value='数量列'，不使用 x/y。"
+            "省略 value 时按类别统计行数；快捷 API 的 metric 对应 value。"
+        )
+
     mapping_fields = set(cls.required_fields) | set(cls.optional_fields.keys())
     chart_field_names = {
         field.name
@@ -325,4 +335,6 @@ from data_visuals.charts.box import Box  # noqa: E402, F401
 from data_visuals.charts.heatmap import Heatmap  # noqa: E402, F401
 from data_visuals.charts.histogram import Histogram  # noqa: E402, F401
 from data_visuals.charts.confusion import Confusion  # noqa: E402, F401
+from data_visuals.charts.pie import Pie, Donut  # noqa: E402, F401
+from data_visuals.charts.radar import Radar  # noqa: E402, F401
 

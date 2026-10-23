@@ -13,7 +13,7 @@ def create_panel_axes(fig, sp, rect):
     panel = sp.get("_custom_panel") if sp["chart"] == "custom" else None
     if sp["chart"] == "custom" and not isinstance(panel, CustomPanel):
         raise TypeError("A custom subplot requires its runtime CustomPanel; use Figure[row, col].custom(draw)")
-    projection = panel.projection if panel else None
+    projection = panel.projection if panel else ("polar" if sp["chart"] == "radar" else None)
     options = dict(panel.axes_options) if panel else {}
     return fig.add_axes(rect, projection=projection,
                         label=f"data_visuals:{sp['row']},{sp['col']}", **options)

@@ -26,6 +26,7 @@ from copy import deepcopy
 import warnings
 
 import pandas as pd
+import numpy as np
 
 from data_visuals.core.config import FigureConfig, get_default_config
 from data_visuals.core.canvas import normalize_canvas
@@ -524,13 +525,39 @@ class Figure:
             gb = req.get("group_by", [])
             cols = req.get("columns", {})
             derived[(row, col)] = {}
-            if gb and cols:
+            chart = chart_specs.get((row, col))
+            if chart and chart.chart_type in {"pie", "donut", "radar"}:
+                # Observe only supplied categories. Categorical dtypes can
+                # otherwise synthesize absent radar axes or zero-size slices.
+                value = chart.mapping.get("value")
+                source = panel_df
+                if chart.chart_type in {"pie", "donut"} and value:
+                    # Integer groupby sums can wrap before the renderer ever
+                    # sees them. Amounts are real quantities; sum in float64
+                    # without changing the caller's DataFrame or row counts.
+                    source = panel_df.assign(**{value: panel_df[value].astype("float64")})
+                grouped = source.groupby(gb, sort=False, observed=True, dropna=False)
+                if chart.chart_type in {"pie", "donut"}:
+                    value = chart.mapping.get("value")
+                    if value:
+                        result = grouped[value].sum().rename(f"{value}_sum")
+                    else:
+                        result = grouped.size().rename(f"{chart.mapping['group']}_count")
+                    amounts = result.to_numpy(dtype=float)
+                    if not np.isfinite(amounts).all() or (amounts < 0).any():
+                        raise ValueError(
+                            f"子图 [{row},{col}] ({chart.chart_type}) 聚合后的数量必须是有限非负数。"
+                        )
+                else:
+                    value = chart.mapping["y"]
+                    result = grouped[value].mean().rename(f"{value}_mean")
+                computed[(row, col)] = result.reset_index()
+            elif gb and cols:
                 computed[(row, col)] = aggregate(panel_df, group_by=gb, columns=cols)
             else:
                 # line/scatter: 不需要聚合，直接引用原始数据
                 computed[(row, col)] = panel_df.copy()
 
-            chart = chart_specs.get((row, col))
             if not chart:
                 continue
             if chart.chart_type == "line":
@@ -713,6 +740,13 @@ class Figure:
             if group_col and group_col in cdf.columns and _label_map:
                 cdf = cdf.copy()
                 cdf[group_col] = cdf[group_col].map(_label_map).fillna(cdf[group_col])
+                identity = ([group_col, chart.mapping["x"]] if chart.chart_type == "radar"
+                            else [group_col])
+                if chart.chart_type in {"pie", "donut", "radar"} and cdf.duplicated(identity).any():
+                    raise ValueError(
+                        f"子图 [{row},{col}] ({chart.chart_type}) labels 将不同类别合并为同名；"
+                        "请为每个类别指定不同的显示名，或先在数据层明确合并。"
+                    )
                 computed[(row, col)] = cdf
             if group_col and _label_map:
                 for name, payload in derived[(row, col)].items():
@@ -895,7 +929,7 @@ class Figure:
         # explicitly rather than inheriting another panel's numeric labels.
         for cell in layout_spec["cells"]:
             decl = self._subplot_decls.get((cell["row"], cell["col"]))
-            if decl and decl["chart_type"] == "custom":
+            if decl and decl["chart_type"] in {"custom", "pie", "donut", "radar"}:
                 cell["shared_axes"] = {
                     "x_shared": False, "y_shared": False,
                     "x_shared_with": -1, "y_shared_with": -1,
@@ -914,7 +948,18 @@ class Figure:
                 if decl.get("domain"):
                     chart_opts["domain"] = decl["domain"]
                 if decl.get("chart_opts"):
-                    chart_opts.update(decl["chart_opts"])
+                    if chart.chart_type in {"pie", "donut", "radar"}:
+                        # The validated ChartSpec already resolved typed
+                        # overrides and converted NumPy scalars to JSON-safe
+                        # values. Reapply only renderer-specific options.
+                        typed = {item.name for item in dataclass_fields(type(chart))
+                                 if item.init and item.name not in {"mapping", "title"}}
+                        chart_opts.update({key: value for key, value in decl["chart_opts"].items()
+                                           if key not in typed})
+                    else:
+                        chart_opts.update(decl["chart_opts"])
+                if chart.chart_type in {"pie", "donut"} and chart_opts.get("order"):
+                    chart_opts["order"] = [_label_map.get(value, value) for value in chart_opts["order"]]
                 sp = SubplotSpec(
                     row=r,
                     col=c,

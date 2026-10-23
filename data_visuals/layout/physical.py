@@ -24,6 +24,8 @@ def _preferred_aspect(panel):
     if panel.custom_panel is not None:
         custom = panel.custom_panel
         return custom.box_aspect or custom.preferred_aspect
+    if panel.chart_type in {"pie", "donut", "radar"}:
+        return 1.0
     if panel.chart_type in {"heatmap", "confusion"}:
         data = panel.computed_data
         x, y = panel.data_mapping.get("x"), panel.data_mapping.get("y")

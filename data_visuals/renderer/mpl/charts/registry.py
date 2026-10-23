@@ -21,6 +21,8 @@ def _populate() -> None:
     from data_visuals.renderer.mpl.charts.heatmap import _draw_heatmap
     from data_visuals.renderer.mpl.charts.histogram import _draw_histogram
     from data_visuals.renderer.mpl.charts.confusion import _draw_confusion
+    from data_visuals.renderer.mpl.charts.pie import _draw_pie
+    from data_visuals.renderer.mpl.charts.radar import _draw_radar
 
     _BUILDERS.update({
         "bar": _draw_bar,
@@ -30,6 +32,9 @@ def _populate() -> None:
         "heatmap": _draw_heatmap,
         "histogram": _draw_histogram,
         "confusion": _draw_confusion,
+        "pie": _draw_pie,
+        "donut": _draw_pie,
+        "radar": _draw_radar,
     })
 
 
