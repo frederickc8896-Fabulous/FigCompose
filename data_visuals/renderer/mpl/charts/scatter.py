@@ -235,6 +235,7 @@ def _draw_scatter(ax, sp, cfg, color_map):
         else:
             sizes = raw_sizes.fillna(0)
     handles, obstacles, errorbars = [], [], {}
+    displaced_data = False
     for index, (key, sub) in enumerate(grouped(df, g_col)):
         color = series_color(key, index, cfg, color_map)
         style = styles.get(key, styles.get(str(key), {}))
@@ -264,6 +265,17 @@ def _draw_scatter(ax, sp, cfg, color_map):
                             alpha=opts.get("opacity", 0.7), transform=transform)
         artist._data_visuals_series_key = key
         artist._data_visuals_x_offset_pt = offset_pt
+        if offset_pt:
+            # A display-space translation prevents Matplotlib from recognising
+            # transData as the collection's data branch. Preserve automatic
+            # limits from the actual coordinates, including supplied CI bounds;
+            # group dodging must not change the numerical data domain.
+            xy = np.ma.filled(artist.get_offsets(), np.nan)
+            ax.update_datalim(xy)
+            if intervals is not None:
+                ax.update_datalim(np.column_stack((xy[:, 0], values["lower"][positions])))
+                ax.update_datalim(np.column_stack((xy[:, 0], values["upper"][positions])))
+            displaced_data = True
         for (_, row), area in zip(sub.iterrows(), group_sizes):
             xy = (row[x_col], row[y_col])
             if not all(pd.notna(value) and isinstance(value, Real) and np.isfinite(value) for value in xy):
@@ -273,6 +285,10 @@ def _draw_scatter(ax, sp, cfg, color_map):
                               "color": color, "label": None if pd.isna(label) else label})
         if key is not None:
             handles.append(artist)
+    if displaced_data:
+        # Explicit chart limits are applied later by _decorations. This also
+        # honours any axes whose automatic scaling was already disabled.
+        ax.autoscale_view()
     ax._data_visuals_errorbars = errorbars
     if opts.get("trend"):
         trend = frame(sp.get("derived_data", {}).get("trend_data", []))
