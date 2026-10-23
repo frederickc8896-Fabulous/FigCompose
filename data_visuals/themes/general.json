@@ -1,0 +1,121 @@
+{
+    "name": "general",
+    "description": "通用高质量论文主题 (Times New Roman, bold titles, minimal clean design)",
+
+    "font": {
+        "family": "Times New Roman, serif",
+        "title_weight": "bold",
+        "subtitle_weight": "bold",
+        "cell_title_weight": "bold",
+        "axis_label_weight": "bold",
+        "tick_label_weight": "normal",
+        "legend_title_weight": "bold",
+        "legend_label_weight": "normal",
+        "annotation_weight": "normal"
+    },
+
+    "layout": {
+        "subplot_title_gap": 0.6,
+        "title_legend_gap": 0.4,
+        "legend_axes_gap": 0.5,
+        "panel_padding": 0.25,
+        "vertical_alignment_tolerance": 0.5
+    },
+
+    "publication": {
+        "font_sizes": {"main_title": 11, "title": 9, "axis_label": 8, "tick": 7, "legend": 8},
+        "canvas_padding": 6,
+        "panel_gap": 8,
+        "min_plot_width": 45,
+        "min_plot_height": 40,
+        "line": {"stroke_width": 1.0, "error_bar_width": 0.7, "marker_size": 12, "scatter_point_size": 14},
+        "axis": {"tick_size": 2.5, "tick_width": 0.6, "domain_width": 0.6, "label_padding": 2, "title_padding": 3},
+        "bar": {"stroke_width": 0.35},
+        "boxplot": {"stroke_width": 0.7, "median_stroke_width": 1.0},
+        "heatmap": {"cell_stroke_width": 0.35},
+        "legend": {"symbol_size": 14, "padding": 3}
+    },
+
+    "color": {
+        "background": "#ffffff",
+        "text": "#1a1a1a",
+        "axis": "#333333",
+        "grid": "#e0e0e0",
+        "rule": "#666666",
+        "preset": "curated-10-default"
+    },
+
+    "line": {
+        "stroke_width": 2.5,
+        "error_bar_width": 1.8,
+        "rule_stroke_width": 2,
+        "reference_dash": [5, 3],
+        "mean_line_dash": [5, 3],
+        "marker_size": 36,
+        "scatter_point_size": 48
+    },
+
+    "axis": {
+        "grid": false,
+        "grid_color": "#c0c0c0",
+        "grid_opacity": 0.95,
+        "tick_size": 5,
+        "tick_width": 1,
+        "tick_count": 5,
+        "domain_padding": 0.2,
+        "label_angle": 0,
+        "label_padding": 5,
+        "title_padding": 10,
+        "domain_width": 1,
+        "domain_color": "#333333"
+    },
+
+    "legend": {
+        "default_position": "top-right",
+        "title_padding": 5,
+        "label_padding": 2,
+        "symbol_size": 80,
+        "symbol_stroke_width": 1.5,
+        "padding": 8,
+        "corner_radius": 4,
+        "stroke_color": "#e0e0e0",
+        "stroke_width": 0.5
+    },
+
+    "title": {
+        "anchor": "middle",
+        "offset": 10,
+        "subtitle_padding": 2
+    },
+
+    "view": {
+        "stroke_width": 0,
+        "continuous_width": 400,
+        "continuous_height": 300
+    },
+
+    "bar": {
+        "stroke": "#000000",
+        "stroke_width": 0.5,
+        "width_ratio": 0.6,
+        "corner_radius": 0
+    },
+
+    "boxplot": {
+        "stroke": "#000000",
+        "stroke_width": 2.0,
+        "median_stroke_width": 2.0,
+        "size": 44,
+        "ticks": {"size": 33}
+    },
+
+    "heatmap": {
+        "cell_stroke": "#000000",
+        "cell_stroke_width": 0.8
+    },
+
+    "y2_axis": {
+        "bar_opacity": 0.3,
+        "line_dash": [4, 2]
+    }
+}

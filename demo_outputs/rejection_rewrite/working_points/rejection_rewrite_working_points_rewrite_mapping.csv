@@ -1,0 +1,9 @@
+rewrite_number,description_id,description_text
+1,OUT_nomatch,The text does not match any supported request.
+2,OUT_outside,This text falls outside the supported topics.
+3,OUT_unrelated,The text is unrelated to any supported topic.
+4,OUT_notinlist,The text is about a topic that is not in the list above.
+5,OUT_notabout,The text is not about any supported topic.
+6,OUT_notamong,This request is not among the supported ones.
+7,OUT_concerns,The text concerns a topic outside the supported set.
+8,OUT_otherthan,The text is about something other than the supported topics.

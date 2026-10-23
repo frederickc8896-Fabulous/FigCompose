@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "data_visuals"
+version = "0.1.0"
+description = "PaperFig — rule-driven publication-quality visualization engine for researchers"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "PaperFig contributors"}]
+keywords = ["visualization", "matplotlib", "research", "paper", "publication"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "pyyaml>=6.0",
+    "scipy>=1.10",
+    "statsmodels>=0.14",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pytest-cov"]
+
+[tool.setuptools.packages.find]
+include = ["data_visuals", "data_visuals.*"]
+
+[tool.setuptools.package-data]
+data_visuals = ["themes/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+pythonpath = ["."]
