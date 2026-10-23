@@ -19,7 +19,7 @@ Figure — 顶层用户 API 入口。
 
 from __future__ import annotations
 
-from typing import Optional, Dict, List, Any, Union, Tuple
+from typing import Optional, Dict, List, Any, Union, Tuple, Sequence
 from dataclasses import fields as dataclass_fields
 from collections.abc import Mapping
 from copy import deepcopy
@@ -31,6 +31,7 @@ from data_visuals.core.config import FigureConfig, get_default_config
 from data_visuals.core.canvas import normalize_canvas
 from data_visuals.core.legend import merge_legend, normalize_legend
 from data_visuals.core.spec import FigureSpec, SubplotSpec
+from data_visuals.core.panel import CustomPanel
 from data_visuals.charts import (
     ChartSpec,
     create_chart,
@@ -107,7 +108,7 @@ class SubplotBuilder:
         Parameters
         ----------
         chart_type : str
-            图表类型: bar | line | scatter | box | heatmap
+            图表类型，通过 list_chart_types() 查询；原生绘制函数使用 custom()。
         title : str | None
             子图标题（可选关键词）
         y_columns : list[str] | None
@@ -134,6 +135,52 @@ class SubplotBuilder:
             chart_opts=chart_opts,
             where=where,
         )
+        return self
+
+    def custom(
+        self,
+        draw,
+        *,
+        title: Optional[str] = None,
+        payload: Any = None,
+        min_size: Tuple[float, float] = (72.0, 48.0),
+        preferred_aspect: float = 1.75,
+        box_aspect: Optional[float] = None,
+        axes: str = "off",
+        limits: Optional[Sequence[Tuple[float, float]]] = None,
+        projection: Optional[str] = None,
+        axes_options: Optional[Mapping[str, Any]] = None,
+        color_group: Optional[str] = None,
+        categories: Optional[Sequence[Any]] = None,
+        legend: Optional[Union[Dict[str, Any], bool]] = None,
+    ) -> "SubplotBuilder":
+        """Draw a custom Matplotlib panel inside the measured Figure layout.
+
+        ``draw(ax, context)`` draws into the allocated axes and returns ``None``
+        or ``PanelResult``. The framework owns the Figure, titles, legends and
+        export; the callback owns the panel's nodes, text and connections.
+        Dimensions in ``min_size`` are points; ``box_aspect`` is width/height.
+        No DataFrame is required for a Figure containing only custom panels.
+        ``projection`` chooses a registered Matplotlib Axes projection;
+        ``axes_options`` supplies its native constructor options. Projected
+        panels keep native ranges when ``limits`` is omitted.
+        """
+        panel = CustomPanel(
+            draw=draw, payload=payload, min_size=min_size,
+            preferred_aspect=preferred_aspect, box_aspect=box_aspect,
+            axes=axes, limits=limits, projection=projection, axes_options=axes_options,
+            color_group=color_group,
+            categories=categories,
+        )
+        options = {} if legend is None else {"legend": normalize_legend(legend)}
+        self._figure._subplot_decls[(self._row, self._col)] = {
+            "chart_type": "custom",
+            "mapping": {"group": color_group} if color_group is not None else {},
+            "title": title,
+            "chart_opts": options,
+            "custom_panel": panel,
+        }
+        self._figure._spec = None
         return self
 
     def __getattr__(self, name: str):
@@ -405,12 +452,15 @@ class Figure:
         Raises
         ------
         ValueError
-            如果 DataFrame 未提供或子图声明为空
+            如果统计子图缺少 DataFrame，或子图声明为空。
         """
         if self._spec is not None:
             return self._spec
 
-        if self._data is None:
+        if self._data is None and (
+            not self._subplot_decls
+            or any(decl["chart_type"] != "custom" for decl in self._subplot_decls.values())
+        ):
             raise ValueError(
                 "Figure 没有数据。请通过 Figure(data=df) 或 .add_data(df) 提供。"
             )
@@ -423,7 +473,7 @@ class Figure:
         df = self._data
 
         # ── Step 0: 数据完整性前置校验 ──
-        _hdr_warnings = validate_header(df, source_hint="Figure.data")
+        _hdr_warnings = validate_header(df, source_hint="Figure.data") if df is not None else []
         for w in _hdr_warnings:
             warnings.warn(w, stacklevel=2)
 
@@ -433,6 +483,8 @@ class Figure:
         panel_data: Dict[Tuple[int, int], pd.DataFrame] = {}
 
         for (row, col), decl in self._subplot_decls.items():
+            if decl["chart_type"] == "custom":
+                continue
             panel_df = _filter_subplot_data(df, decl.get("where"), row, col)
             panel_data[(row, col)] = panel_df
             ct = decl["chart_type"]
@@ -679,6 +731,28 @@ class Figure:
                 color_domains[group_col] = sorted(
                     dict.fromkeys(mapped), key=lambda value: (type(value).__name__, str(value))
                 )
+        # Diagrams declare raw semantic categories directly. Resolve those
+        # through the same display labels as statistical data, retaining raw
+        # aliases for the callback's colour lookup instead of allocating a
+        # second colour to the same category.
+        category_aliases: Dict[str, Dict[Any, Any]] = {}
+        for decl in self._subplot_decls.values():
+            custom = decl.get("custom_panel")
+            if custom is not None and custom.color_group is not None:
+                group = custom.color_group
+                raw_values = list(custom.categories or ())
+                if df is not None and group in df.columns:
+                    raw_values.extend(df[group].dropna().unique().tolist())
+                aliases = category_aliases.setdefault(group, {})
+                aliases.update({
+                    value: _label_map[value] for value in raw_values
+                    if value in _label_map and _label_map[value] != value
+                })
+                domain = color_domains.setdefault(group, [])
+                for value in custom.categories or ():
+                    canonical = _label_map.get(value, value)
+                    if canonical not in domain:
+                        domain.append(canonical)
 
         # ── Step 2.5: Legend 模式检测 ──
         # 收集所有子图中出现的 group 列名。
@@ -690,22 +764,31 @@ class Figure:
         panel_legends = {}
         legend_groups = {}
         legend_counts = {}
-        for (row, col), chart in chart_specs.items():
-            options = self._subplot_decls[(row, col)].get("chart_opts") or {}
+        for (row, col), decl in self._subplot_decls.items():
+            chart = chart_specs.get((row, col))
+            custom = decl.get("custom_panel")
+            options = decl.get("chart_opts") or {}
             legend_options = merge_legend(
                 self._legend, options.get("legend"), panel_explicit="legend" in options,
             )
             panel_legends[(row, col)] = legend_options
-            g = chart.mapping.get("group")
-            measures = chart.mapping.get("y")
+            g = custom.color_group if custom is not None else chart.mapping.get("group")
+            measures = None if custom is not None else chart.mapping.get("y")
             measure_count = len(measures) if isinstance(measures, (list, tuple)) else 0
-            legend_counts[(row, col)] = (
-                df[g].nunique() if g in df.columns else measure_count if measure_count > 1 else 0
-            )
+            if custom is not None:
+                legend_counts[(row, col)] = len(color_domains.get(g, []))
+            else:
+                legend_counts[(row, col)] = (
+                    df[g].nunique() if g in df.columns else measure_count if measure_count > 1 else 0
+                )
             if g is None and measure_count > 1 and legend_options.get("scope") == "shared":
                 # Explicitly shared wide-table measures form one virtual group.
                 # Auto keeps the established per-panel multi-metric legends.
                 g = "__measures__"
+            elif g is None and custom is not None and legend_options.get("scope") == "shared":
+                # Callback-provided handles may share a legend even when no
+                # categorical colour domain is needed by the diagram itself.
+                g = "__custom__"
             legend_groups[(row, col)] = g
             if (g is not None and legend_options.get("visible", True)
                     and legend_options.get("scope", "auto") != "local"):
@@ -807,6 +890,16 @@ class Figure:
                 chart_axes.append({"x": None, "y": None})
 
         layout_spec = detect_shared_axes(layout_spec, chart_axes)
+        # A drawing panel's coordinates have no statistical sharing semantics.
+        # The legacy detector may mark cells with no y variable, so clear these
+        # explicitly rather than inheriting another panel's numeric labels.
+        for cell in layout_spec["cells"]:
+            decl = self._subplot_decls.get((cell["row"], cell["col"]))
+            if decl and decl["chart_type"] == "custom":
+                cell["shared_axes"] = {
+                    "x_shared": False, "y_shared": False,
+                    "x_shared_with": -1, "y_shared_with": -1,
+                }
 
         # ── Step 5: 组装 FigureSpec ──
         subplots: List[SubplotSpec] = []
@@ -842,6 +935,27 @@ class Figure:
                     shared_axes=cell.get("shared_axes", {}),
                     computed_data=computed.get((r, c)),
                     derived_data=derived.get((r, c), {}),
+                )
+            elif decl and decl["chart_type"] == "custom":
+                custom_mapping = dict(decl["mapping"])
+                aliases = category_aliases.get(decl["custom_panel"].color_group)
+                if aliases:
+                    custom_mapping["category_aliases"] = dict(aliases)
+                sp = SubplotSpec(
+                    row=r, col=c,
+                    row_span=cell.get("row_span", 1),
+                    col_span=cell.get("col_span", 1),
+                    chart_type="custom",
+                    data_mapping=custom_mapping,
+                    chart_options=dict(decl.get("chart_opts") or {}),
+                    title=decl.get("title"),
+                    x=cell["x"], y=cell["y"], w=cell["w"], h=cell["h"],
+                    font_sizes=cell.get("font_sizes", {}),
+                    label_margins=cell.get("label_margins", {}),
+                    legend={**cell.get("legend", {}), **panel_legends[(r, c)]},
+                    data_zone=cell.get("data_zone", {}),
+                    shared_axes=cell.get("shared_axes", {}),
+                    custom_panel=decl["custom_panel"],
                 )
             else:
                 sp = SubplotSpec(

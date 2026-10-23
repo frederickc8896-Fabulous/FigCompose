@@ -19,6 +19,10 @@ from data_visuals.core.legend import normalize_legend
 from data_visuals.layout.placement import LayoutError, align_gutters, cell_boxes, inset_box
 from data_visuals.renderer.mpl.config import MplConfig
 from data_visuals.renderer.mpl.charts.registry import _BUILDERS
+from data_visuals.renderer.mpl.custom import (
+    prepare_custom_panels, position_custom, custom_bounds, place_custom_title,
+    create_panel_axes, position_axes,
+)
 
 DPI = 72  # One design point is one measurement pixel, independent of export DPI.
 
@@ -71,6 +75,8 @@ def _legend_options(spec, subplot=None):
 def _legend_group(subplot, options):
     group = subplot["data"].get("group")
     measures = subplot["data"].get("y")
+    if group is None and subplot["chart"] == "custom" and options.get("scope") == "shared":
+        return "__custom__"
     if group is None and isinstance(measures, (list, tuple)) and len(measures) > 1 and options.get("scope") == "shared":
         return "__measures__"
     return group
@@ -97,7 +103,8 @@ def _legend_entries(handles, options, subplot=None):
             [labels.get(key, labels.get(str(key), label)) for key, _, label in entries])
 
 
-def _shared_legend_blocks(fig, spec, cfg, group_cells, shared, maps, width, padding, default_size):
+def _shared_legend_blocks(fig, spec, cfg, group_cells, shared, maps, width, padding, default_size,
+                          custom_records=None):
     from data_visuals.renderer.mpl.legends import MeasuredLegend
     options = _legend_options(spec)
     position = options.get("position", spec.get("shared_legend", {}).get("position", "top"))
@@ -130,15 +137,18 @@ def _shared_legend_blocks(fig, spec, cfg, group_cells, shared, maps, width, padd
     blocks = []
     for column in sorted(shared):
         cells = group_cells[column]
-        visible = (_sort_values(name for sp in cells for name in sp["data"]["y"])
+        # Custom content supplies actual glyphs. Statistical glyphs keep their
+        # existing construction and take priority for repeated semantic keys.
+        chart_cells = [sp for sp in cells if sp["chart"] != "custom"]
+        visible = (_sort_values(name for sp in chart_cells for name in sp["data"]["y"])
                    if column == "__measures__" else
-                   _sort_values(row[column] for sp in cells
+                   _sort_values(row[column] for sp in chart_cells
                                 for row in sp.get("computed_data", []) if column in row))
         color_map = maps.get(column, {})
-        if all(sp["chart"] == "scatter" for sp in cells):
-            handles = _shared_scatter_legend(cells, visible, color_map, cfg)
-        elif all(sp["chart"] == "line" for sp in cells):
-            markers = [sp.get("options", {}).get("markers", True) for sp in cells]
+        if chart_cells and all(sp["chart"] == "scatter" for sp in chart_cells):
+            handles = _shared_scatter_legend(chart_cells, visible, color_map, cfg)
+        elif chart_cells and all(sp["chart"] == "line" for sp in chart_cells):
+            markers = [sp.get("options", {}).get("markers", True) for sp in chart_cells]
             handles = [Line2D([], [], color=color_map[v], marker="o" if all(markers) else None,
                               linewidth=cfg.line_stroke_width, markersize=math.sqrt(cfg.marker_size),
                               label=str(v)) for v in visible]
@@ -149,7 +159,18 @@ def _shared_legend_blocks(fig, spec, cfg, group_cells, shared, maps, width, padd
                              linewidth=.5, label=str(v)) for v in visible]
             for handle, value in zip(handles, visible):
                 handle._paperfig_legend_key = value
+        seen = {getattr(handle, "_paperfig_legend_key", handle.get_label()) for handle in handles}
+        for sp in cells:
+            record = (custom_records or {}).get((sp["row"], sp["col"]))
+            for handle in record["handles"] if record else ():
+                label = handle.get_label()
+                key = getattr(handle, "_paperfig_legend_key", label)
+                if label and not label.startswith("_") and key not in seen:
+                    handles.append(handle)
+                    seen.add(key)
         handles, labels = _legend_entries(handles, options)
+        if not handles:
+            continue
         legend = MeasuredLegend(fig, handles, labels, options, cfg,
                                 default_fontsize=default_size, max_width=max_width,
                                 orientation="vertical" if side else "horizontal")
@@ -162,6 +183,10 @@ def _shared_legend_blocks(fig, spec, cfg, group_cells, shared, maps, width, padd
                                fontproperties=prop, ha="center", va="top", color=cfg.text_color)
             heading_height = heading.get_window_extent(fig.canvas.get_renderer()).height + 3
         blocks.append({"legend": legend, "heading": heading, "heading_height": heading_height})
+    if len(blocks) == 1 and blocks[0]["heading"] is not None:
+        blocks[0]["heading"].remove()
+        blocks[0]["heading"] = None
+        blocks[0]["heading_height"] = 0.0
     return blocks, position, options
 
 
@@ -280,22 +305,29 @@ def _style_axis(ax, fs, cfg, secondary=False):
     ax.tick_params(labelsize=fs["tick"], width=cfg.axis_tick_width, length=cfg.axis_tick_size,
                    pad=cfg.axis_label_padding,
                    **({} if secondary else {"colors": cfg.text_color}))
-    if secondary:
+    if ax.name == "3d":
+        # Axes3D.grid does not accept the Cartesian grid styling contract.
+        ax.grid(cfg.axis_grid and not secondary)
+        for axis in ax._axis_map.values():
+            axis.line.set_color(cfg.axis_domain_color)
+            axis.line.set_linewidth(cfg.axis_domain_width)
+    elif secondary:
         ax.grid(False)
     else:
         ax.set_axisbelow(True)
         ax.grid(cfg.axis_grid, **({"color": cfg.axis_grid_color, "alpha": cfg.grid_opacity,
                                   "linewidth": 0.5} if cfg.axis_grid else {}))
-    for label in ax.get_xticklabels() + ax.get_yticklabels():
+    axes = list(ax._axis_map.values())
+    for label in [label for axis in axes for label in axis.get_ticklabels()]:
         label.set_fontfamily(cfg.font_family)
         label.set_fontweight(cfg.tick_label_weight)
-    for label in (ax.xaxis.label, ax.yaxis.label):
+    for label in (axis.label for axis in axes):
         label.set_fontsize(fs["axis_label"])
         label.set_fontfamily(cfg.font_family)
         label.set_fontweight(cfg.axis_label_weight)
         if not secondary:
             label.set_color(cfg.text_color)
-    for text in (ax.xaxis.get_offset_text(), ax.yaxis.get_offset_text()):
+    for text in (axis.get_offset_text() for axis in axes):
         text.set_fontsize(fs["tick"])
         text.set_fontfamily(cfg.font_family)
 
@@ -336,7 +368,12 @@ def _fit_ticks(ax, width, renderer, cfg, fs):
 
 
 def figure_to_matplotlib(spec) -> plt.Figure:
-    d = deepcopy(spec.to_dict() if hasattr(spec, "to_dict") else spec)
+    from data_visuals.core.spec import FigureSpec
+    # Runtime callbacks stay outside the JSON-safe representation. Their
+    # declarations preserve identity while mutable layout dictionaries detach.
+    raw = spec.to_dict(runtime=True) if isinstance(spec, FigureSpec) else (
+        spec.to_dict() if hasattr(spec, "to_dict") else spec)
+    d = deepcopy(raw)
     width, height = float(d["canvas"]["width"]), float(d["canvas"]["height"])
     if not all(math.isfinite(v) and v > 0 for v in (width, height)):
         raise ValueError("Canvas width and height must be finite and positive")
@@ -384,6 +421,8 @@ def _fit_cell_ticks(ax, zone, box, renderer, cfg, fs, key, width, height, paddin
 
 
 def _minimum_plot(sp, cfg, renderer):
+    if sp["chart"] == "custom":
+        return sp["_custom_panel"].min_size
     if not cfg.physical:
         return max(20.0, sp["font_sizes"]["tick"] * 2)
     minimum_w, minimum_h = cfg.min_plot_width, cfg.min_plot_height
@@ -407,7 +446,11 @@ def _minimum_plot(sp, cfg, renderer):
 
 def _share_facet_axes(records, options):
     """Join ranges explicitly, retaining all panels' data when limits are automatic."""
-    ordered = [records[key] for key in sorted(records)]
+    ordered = [records[key] for key in sorted(records)
+               if records[key]["subplot"]["chart"] != "custom"
+               and records[key]["axes"].name == "rectilinear"]
+    if not ordered:
+        return
     for name in ("x", "y"):
         if not options.get(f"share{name}"):
             continue
@@ -503,10 +546,12 @@ def _place_local_legend(record, renderer, width, height):
         y = zone["y"] + (zone["h"] - legend.height - gap if position.startswith("lower") else gap)
     elif position == "top":
         x = record["box"]["x"] + (record["box"]["w"] - legend.width) / 2
-        y = zone["y"] - gap - legend.height
+        content_top = min(zone["y"], height - record["content_bbox"].y1) if record.get("custom") else zone["y"]
+        y = content_top - gap - legend.height
     else:
         bboxes = [item.get_tightbbox(renderer, for_layout_only=True) for item in
                   [record["axes"]] + record["secondary_axes"] + record["colorbar_axes"]]
+        bboxes.extend(custom_bounds(record.get("custom"), renderer))
         bbox = Bbox.union([box for box in bboxes if box is not None])
         if position == "bottom":
             x = record["box"]["x"] + (record["box"]["w"] - legend.width) / 2
@@ -535,6 +580,7 @@ def _render(fig, d, cfg, width, height):
             sp["font_sizes"] = {key: max(8.0, value) for key, value in sp["font_sizes"].items()}
     maps = _colour_maps(d, cfg)
     _continuous_limits(subplots)
+    custom_records, primary_axes = prepare_custom_panels(fig, subplots, cfg, maps, width, height)
     group_cells = defaultdict(list)
     panel_legend_options = {}
     for sp in subplots:
@@ -561,7 +607,7 @@ def _render(fig, d, cfg, width, height):
     legend_fs = (cfg.font_sizes["legend"] if cfg.physical else
                  d.get("shared_legend", {}).get("font_size", subplots[0]["font_sizes"]["legend"]))
     blocks, shared_position, shared_options = _shared_legend_blocks(
-        fig, d, cfg, group_cells, shared, maps, width, padding, legend_fs)
+        fig, d, cfg, group_cells, shared, maps, width, padding, legend_fs, custom_records)
     # Side legends are positioned after the shared note has been measured.
     deferred_side = shared_position in ("left", "right")
     if deferred_side:
@@ -603,6 +649,7 @@ def _render(fig, d, cfg, width, height):
     for sp in subplots:
         key = sp["row"], sp["col"]
         fs, box = sp["font_sizes"], boxes[key]
+        custom = custom_records.get(key)
         colorbar = sp["chart"] in ("heatmap", "confusion")
         minimum = _minimum_plot(sp, cfg, renderer)
         # Start with modest gutters and grow from actual measurements. Oversized
@@ -610,6 +657,8 @@ def _render(fig, d, cfg, width, height):
         initial = {"left": fs["axis_label"] * 1.5, "right": fs["tick"] * 0.8,
                    "top": fs["title"] * 1.6 if sp.get("title") else 2.0,
                    "bottom": fs["axis_label"] * 1.5}
+        if custom and custom["panel"].axes == "off":
+            initial.update(left=2.0, right=2.0, bottom=2.0)
         if facet:
             initial["right"] = 2.0
             if facet_options.get("sharey") and sp["col"] > 0:
@@ -617,7 +666,9 @@ def _render(fig, d, cfg, width, height):
             if facet_options.get("sharex") and sp["row"] < d["grid"]["rows"] - 1:
                 initial["bottom"] = 2.0
         zone = _inset(box, initial, minimum, key, width, height, padding, hint_header, hint_side)
-        ax = fig.add_axes(_frac_box(zone, width, height), label=f"data_visuals:{key[0]},{key[1]}")
+        ax = primary_axes[key] if key in primary_axes else create_panel_axes(
+            fig, sp, _frac_box(zone, width, height))
+        ax.set_position(_frac_box(zone, width, height))
         if colorbar:
             cb = {"x": zone["x"] + zone["w"] + fs["tick"] * 0.6, "y": zone["y"],
                   "w": fs["tick"] * 0.7, "h": zone["h"]}
@@ -625,10 +676,14 @@ def _render(fig, d, cfg, width, height):
             sp["_colorbar_font_size"] = fs["tick"]
         _style_axis(ax, fs, cfg)
         builder = _BUILDERS.get(sp["chart"])
-        if builder is None:
+        if builder is None and not custom:
             raise ValueError(f"Unknown chart type for matplotlib backend: {sp['chart']}")
         existing_axes = set(fig.axes)
-        handles = builder(ax, sp, cfg, maps.get(sp["data"].get("group", "__measures__"), {})) or []
+        handles = (custom["handles"] if custom else
+                   builder(ax, sp, cfg, maps.get(sp["data"].get("group", "__measures__"), {}))) or []
+        runtime_minimum = getattr(ax, "_data_visuals_minimum_plot", None)
+        if runtime_minimum is not None:
+            minimum = tuple(max(old, new) for old, new in zip(minimum, runtime_minimum))
         auxiliaries = [extra for extra in fig.axes if extra not in existing_axes]
         secondary = list(getattr(ax, "_data_visuals_secondary_axes", []))
         cbars = [extra for extra in auxiliaries if extra not in secondary] if colorbar else []
@@ -636,9 +691,11 @@ def _render(fig, d, cfg, width, height):
         y_label = sp["data"].get("y", "")
         if isinstance(y_label, list):
             y_label = " / ".join(y_label)
-        ax.set_xlabel(labels.get("x", sp["data"].get("x", "")), labelpad=cfg.axis_title_padding)
-        ax.set_ylabel(labels.get("y", y_label), labelpad=cfg.axis_title_padding)
-        if facet:
+        cartesian = not custom
+        if cartesian:
+            ax.set_xlabel(labels.get("x", sp["data"].get("x", "")), labelpad=cfg.axis_title_padding)
+            ax.set_ylabel(labels.get("y", y_label), labelpad=cfg.axis_title_padding)
+        if facet and cartesian:
             if facet_options.get("xlabel") or (facet_options.get("sharex") and sp["row"] < d["grid"]["rows"] - 1):
                 ax.set_xlabel("")
             if facet_options.get("ylabel") or (facet_options.get("sharey") and sp["col"] > 0):
@@ -646,6 +703,9 @@ def _render(fig, d, cfg, width, height):
             ax.tick_params(labelbottom=not (facet_options.get("sharex") and sp["row"] < d["grid"]["rows"] - 1),
                            labelleft=not (facet_options.get("sharey") and sp["col"] > 0))
         _style_axis(ax, fs, cfg)
+        if custom and custom["panel"].axes == "off":
+            ax.set_axis_off()
+            ax.grid(False)
         for extra in secondary:
             _style_axis(extra, fs, cfg, secondary=True)
         for extra in cbars:
@@ -666,6 +726,11 @@ def _render(fig, d, cfg, width, height):
         if uses_shared:
             group_labels.update(str(style.get("label")) for style in
                                 sp.get("options", {}).get("series_styles", {}).values() if style.get("label"))
+            # Return-only custom handles may have no semantic colour group.
+            for cell in group_cells[group]:
+                other = custom_records.get((cell["row"], cell["col"]))
+                if other:
+                    group_labels.update(handle.get_label() for handle in other["handles"])
         unique = {}
         for handle in handles:
             label = handle.get_label() if hasattr(handle, "get_label") else ""
@@ -690,8 +755,10 @@ def _render(fig, d, cfg, width, height):
                      if local_h and local_position == "top" else fs["title"] * cfg.subplot_title_gap)
         ax.set_title(title_text, fontproperties=title_prop, color=cfg.text_color,
                      y=1.0, va="bottom", pad=title_gap)
+        ax.title.set_y(1.0)
         requirements[key] = initial
         records[key] = {"subplot": sp, "box": box, "axes": ax, "secondary_axes": secondary,
+                        "custom": custom,
                         "colorbar_axes": cbars, "local_legend": local_legend, "local_artists": [],
                         "legend_options": legend_options, "legend_gap": local_gap,
                         "local_height": local_h, "minimum": minimum, "facet": facet is not None,
@@ -712,9 +779,19 @@ def _render(fig, d, cfg, width, height):
             zone = (record["zone"] if facet else
                     _inset(record["box"], gutters[key], record["minimum"], key,
                            width, height, padding, hint_header, hint_side))
+            if record["custom"]:
+                try:
+                    zone = position_custom(record["custom"], zone, record["subplot"], cfg, maps, width, height)
+                except LayoutError as error:
+                    # position_custom reports required content size; the solver
+                    # needs the cell size including measured decorations.
+                    error.required_width = record["box"]["w"] + max(0, (error.required_width or zone["w"]) - zone["w"])
+                    error.required_height = record["box"]["h"] + max(0, (error.required_height or zone["h"]) - zone["h"])
+                    raise _canvas_error(error, record["box"], key, width, height, padding, hint_header, hint_side) from None
+            else:
+                record["axes"].set_position(_frac_box(zone, width, height))
             record["zone"] = zone
             rect = _frac_box(zone, width, height)
-            record["axes"].set_position(rect)
             _fit_cell_ticks(record["axes"], zone, record["box"], renderer, cfg, fs,
                             key, width, height, padding, hint_header, hint_side)
             # Titles and legends belong to the cell, so asymmetric y-axis
@@ -732,6 +809,8 @@ def _render(fig, d, cfg, width, height):
                 cb = {"x": zone["x"] + zone["w"] + fs["tick"] * 0.6, "y": zone["y"],
                       "w": fs["tick"] * 0.7, "h": zone["h"]}
                 extra.set_position(_frac_box(cb, width, height))
+            if record["custom"]:
+                place_custom_title(record, renderer, cfg, height)
             record["local_artists"] = _place_local_legend(record, renderer, width, height)
         fig.canvas.draw()
         renderer, changed = fig.canvas.get_renderer(), False
@@ -739,6 +818,7 @@ def _render(fig, d, cfg, width, height):
             zone, fs = record["zone"], record["subplot"]["font_sizes"]
             bboxes = [item.get_tightbbox(renderer, for_layout_only=True) for item in
                       [record["axes"]] + record["secondary_axes"] + record["colorbar_axes"]]
+            bboxes.extend(custom_bounds(record["custom"], renderer))
             bboxes.extend(artist.get_window_extent(renderer) for artist in record["local_artists"])
             bbox = Bbox.union([bb for bb in bboxes if bb is not None])
             pad = max(2.0, fs["tick"] * cfg.panel_padding)
@@ -751,6 +831,7 @@ def _render(fig, d, cfg, width, height):
                     requirements[key][side], changed = value, True
             full_boxes = [item.get_tightbbox(renderer) for item in
                           [record["axes"]] + record["secondary_axes"] + record["colorbar_axes"]]
+            full_boxes.extend(custom_bounds(record["custom"], renderer))
             full_boxes.extend(artist.get_window_extent(renderer) for artist in record["local_artists"])
             record["decoration_bbox"] = tuple(Bbox.union([bb for bb in full_boxes if bb is not None]).bounds)
         if not changed:
@@ -797,6 +878,7 @@ def _render(fig, d, cfg, width, height):
                                     "decoration_bbox": record["decoration_bbox"], "axes": record["axes"],
                                     "secondary_axes": record["secondary_axes"],
                                     "colorbar_axes": record["colorbar_axes"], "legends": record["local_artists"],
+                                    "custom_artists": list(record["custom"]["result"].artists) if record["custom"] else [],
                                     "point_labels": record.get("point_labels", {"texts": [], "boxes": []})}
     for artist in header_artists:
         bbox = artist.get_window_extent(renderer)

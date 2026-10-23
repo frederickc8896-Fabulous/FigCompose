@@ -18,7 +18,9 @@ def _validate_backend(backend: str) -> None:
 
 def _resolve_png_dpi(spec: Any, dpi: Optional[float], scale: Optional[float]) -> float:
     """Apply scale to the requested DPI, falling back to the figure setting."""
-    resolved = dpi if dpi is not None else _spec_to_dict(spec).get("canvas", {}).get("dpi", 150)
+    # Reading export metadata must not serialize runtime custom callbacks.
+    canvas = spec.canvas if hasattr(spec, "canvas") else _spec_to_dict(spec).get("canvas", {})
+    resolved = dpi if dpi is not None else canvas.get("dpi", 150)
     resolved = 150 if resolved is None else resolved
     multiplier = 1 if scale is None else scale
     for name, value in (("dpi", resolved), ("scale", multiplier)):

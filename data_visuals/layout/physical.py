@@ -21,6 +21,9 @@ _MAX_HEIGHT_PASSES = 8
 
 def _preferred_aspect(panel):
     """A soft data-region preference, never a change to the data coordinate axes."""
+    if panel.custom_panel is not None:
+        custom = panel.custom_panel
+        return custom.box_aspect or custom.preferred_aspect
     if panel.chart_type in {"heatmap", "confusion"}:
         data = panel.computed_data
         x, y = panel.data_mapping.get("x"), panel.data_mapping.get("y")

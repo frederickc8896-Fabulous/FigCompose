@@ -17,6 +17,7 @@ from __future__ import annotations
 from data_visuals.core.config import FigureConfig, get_default_config, set_default_config
 from data_visuals.core.spec import FigureSpec, SubplotSpec
 from data_visuals.core.figure import Figure, SubplotBuilder
+from data_visuals.core.panel import PanelContext, PanelResult
 
 __all__ = [
     "Figure",
@@ -26,4 +27,6 @@ __all__ = [
     "FigureConfig",
     "get_default_config",
     "set_default_config",
+    "PanelContext",
+    "PanelResult",
 ]

@@ -28,6 +28,7 @@ import pandas as pd
 
 from data_visuals.core.facets import normalize_facets
 from data_visuals.core.legend import normalize_legend
+from data_visuals.core.panel import CustomPanel
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -89,8 +90,22 @@ class SubplotSpec:
     computed_data: Optional[pd.DataFrame] = None
     derived_data: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """序列化为 JSON-safe dict。computed_data 转为 records 列表。"""
+    # Runtime drawing adapters intentionally remain outside chart_options and
+    # the JSON representation. Their callback and payload retain their identity.
+    custom_panel: Optional[CustomPanel] = field(default=None, repr=False)
+
+    def to_dict(self, *, runtime: bool = False) -> Dict[str, Any]:
+        """Serialize statistical panels to JSON, or retain runtime adapters.
+
+        Custom drawing callbacks cannot be represented in JSON. The renderer
+        opts into ``runtime=True`` to receive the original adapter; the default
+        raises instead of silently dropping a panel's content.
+        """
+        if self.custom_panel is not None and not runtime:
+            raise TypeError(
+                "Custom panels contain runtime drawing callbacks and cannot be serialized to JSON. "
+                "Use to_dict(runtime=True) only for in-process Matplotlib rendering."
+            )
         d: Dict[str, Any] = {
             "row": self.row,
             "col": self.col,
@@ -112,6 +127,8 @@ class SubplotSpec:
             d["options"] = self.chart_options
         if self.title:
             d["title"] = self.title
+        if self.custom_panel is not None:
+            d["_custom_panel"] = self.custom_panel
         if self.computed_data is not None:
             d["computed_data"] = self.computed_data.to_dict(orient="records")
         if self.derived_data:
@@ -210,8 +227,8 @@ class FigureSpec:
         """按行优先遍历所有子图。"""
         return iter(self.subplots)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """序列化为 JSON-safe dict，供 renderer 直接消费。"""
+    def to_dict(self, *, runtime: bool = False) -> Dict[str, Any]:
+        """Serialize to JSON-safe data, or retain custom adapters for rendering."""
         return {
             "version": self.version,
             "canvas": self.canvas,
@@ -226,7 +243,7 @@ class FigureSpec:
             "color_domains": self.color_domains,
             "category_colors": self.category_colors,
             "facets": normalize_facets(self.facets),
-            "subplots": [sp.to_dict() for sp in self.subplots],
+            "subplots": [sp.to_dict(runtime=runtime) for sp in self.subplots],
             "shared_legend": self.shared_legend,
             "legend": normalize_legend(self.legend),
         }
