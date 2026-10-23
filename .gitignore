@@ -31,4 +31,20 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Curated demo_outputs previews and source CSVs are intentionally versioned.
+# Local examples, generated figures, development docs and tests.
+/demo/
+/demo_outputs/
+/docs/
+/test/
+/tests/
+/mock_data/
+/output/
+/outputs/
+
+# Local construction notes, workspace configuration and scientific fixtures.
+/CANVAS_CONTRACT.md
+/global.yaml
+/*.csv
+/*.png
+/*.pdf
+/*.svg
