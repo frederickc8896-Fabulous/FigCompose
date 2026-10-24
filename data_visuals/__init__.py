@@ -11,6 +11,8 @@ __version__ = "0.1.0"
 
 from data_visuals.api import plot
 from data_visuals.core.config import FigureConfig
+from data_visuals.core.quality import FigureReport, FigureQualityError, QualityIssue, check_figure
 from data_visuals.utils.colors import list_color_presets
 
-__all__ = ["plot", "FigureConfig", "list_color_presets", "__version__"]
+__all__ = ["plot", "FigureConfig", "FigureReport", "FigureQualityError", "QualityIssue",
+           "check_figure", "list_color_presets", "__version__"]

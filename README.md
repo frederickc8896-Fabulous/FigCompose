@@ -169,6 +169,39 @@ restored = FigureConfig.load("paper.yaml")
 布局实测后尝试回收多余留白，回收失败时恢复保守布局；自动高度综合考虑真实绘图区宽高。
 样式渲染隔离外部 Matplotlib 视觉设置，原生回调仍可显式调整自己的图元。
 
+## 出图检查与布局快照
+
+`fig.check()` 实测最终文字、字体和绘图区，不调整数据、字号、坐标范围或画布。
+可生成独立检查图，定位文字越界、刻度重叠、字号过小等问题：
+
+```python
+import pandas as pd
+from data_visuals import plot
+
+fig = plot(
+    pd.DataFrame({"epoch": [1, 2, 3], "score": [0.70, 0.81, 0.87]}),
+    x="epoch", plots=[{"kind": "line", "metric": "score"}],
+    canvas={"width": 90}, title="Training progress",
+)
+report = fig.check(debug="layout_check.png")
+print(report.summary())
+report.raise_for_errors()  # 可选；include_warnings=True 也要求消除警告
+report.save("layout_baseline.json")  # 首次建立基线；后续检查保留此文件
+
+comparison = fig.check().compare("layout_baseline.json", tolerance=0.5)
+print(comparison.summary())
+```
+
+- `min_fontsize=7`、`min_tick_gap=1`、`tolerance=1` 均以 **pt** 衡量，可在 `check()` 中覆盖。
+  `report.ok` 表示没有错误；小字号、刻度与装饰重叠等警告仍列在报告中。
+- 报告含实际画布、各子图绘图区、文字边界、实际字体和颜色；调试图用蓝色虚线标记单元、绿色标记绘图区，橙色/红色框定位问题。支持 PNG / SVG / PDF，正式导出不带叠层。
+- `.compare()` 按已记录的物理位置、文字、字体和实际图元样式检查布局变化，默认允许 **0.5 pt 几何误差**；字号与颜色严格比较。DPI 不参与比较。这是布局快照，不是像素截图比较。
+- 已用 `mpl_fig = fig.render()` 做原生 Matplotlib 调整时，可用 `from data_visuals import check_figure`，再调用 `check_figure(mpl_fig)` 检查当前结果；该函数不关闭调用者的 Figure。
+
+绘图区面积占比是矩形分配指标，不代表空白率或审美评分。检查不判断统计结论、数据图元重叠，
+也不保证结构图内部节点、连线或投影三维文字没有碰撞；具体覆盖限制写入报告。
+固定画布本身无法容纳内容时，仍抛出带尺寸提示的 `LayoutError`。
+
 ## 自定义 Matplotlib 面板
 
 高级入口 `data_visuals.core.Figure` 支持跨格布局、宽高权重与原生绘制函数。

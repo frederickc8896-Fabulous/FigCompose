@@ -1251,6 +1251,25 @@ class Figure:
         """在 Jupyter Notebook 中内联展示。"""
         self.display(backend=backend, **kwargs)
 
+    def check(self, *, min_fontsize: float = 7.0, min_tick_gap: float = 1.0,
+              tolerance: float = 1.0, debug=None):
+        """Measure final typography and geometry without changing the figure.
+
+        Returns a portable FigureReport. Optional ``debug`` saves a separate
+        PNG/SVG/PDF with cell, data-rectangle and issue overlays. Impossible
+        layouts retain the existing LayoutError and canvas-size hints.
+        Custom drawing callbacks may run again, as during a regular export.
+        """
+        import matplotlib.pyplot as plt
+        from data_visuals.core.quality import check_figure, _validate_check_options
+        _validate_check_options(min_fontsize, min_tick_gap, tolerance, debug)
+        rendered = self.render()
+        try:
+            return check_figure(rendered, min_fontsize=min_fontsize,
+                                min_tick_gap=min_tick_gap, tolerance=tolerance, debug=debug)
+        finally:
+            plt.close(rendered)
+
     def display(self, *, backend: str = "matplotlib", **kwargs: Any) -> None:
         """在 Notebook 中展示 Matplotlib 图。"""
         from data_visuals.renderer.export import display, _validate_backend

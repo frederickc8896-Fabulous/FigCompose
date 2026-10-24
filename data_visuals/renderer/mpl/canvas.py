@@ -360,6 +360,7 @@ def figure_to_matplotlib(spec) -> plt.Figure:
     cfg = MplConfig(d.get("theme", "general"), palette=d.get("palette"),
                     physical=d["canvas"].get("physical") is True)
     if d.get("font_family"):
+        cfg.font_requested = d["font_family"]
         cfg.font_family = cfg._resolve_font(d["font_family"])
     cfg.background = d.get("background", cfg.background)
     with matplotlib.rc_context(cfg.rcparams()):
@@ -367,6 +368,20 @@ def figure_to_matplotlib(spec) -> plt.Figure:
         try:
             fig.patch.set_facecolor(cfg.background)
             fig._data_visuals_rcparams = cfg.rcparams()
+            fig._data_visuals_font = {"requested": cfg.font_requested, "resolved": cfg.font_family}
+            # Inspection needs presentation metadata, never source rows or
+            # custom callbacks. Keep it separate from the private solver state.
+            fig._data_visuals_quality_context = {
+                "theme": d.get("theme", "general"), "palette": d.get("palette"),
+                "title": deepcopy(d.get("title", {})),
+                "subtitle": deepcopy(d.get("subtitle", {})),
+                "facets": deepcopy(d.get("facets", {})),
+                "series_order": deepcopy(d.get("series_order", {})),
+                "subplots": [{"row": sp["row"], "col": sp["col"], "chart": sp["chart"],
+                              "options": {key: deepcopy(value) for key, value in sp.get("options", {}).items()
+                                          if key in {"series_styles", "series_order", "measure_labels"}}}
+                             for sp in d["subplots"] if sp["chart"]],
+            }
             try:
                 return _render(fig, d, cfg, width, height)
             except LayoutError:
@@ -1044,6 +1059,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
             )
             raise _canvas_error(error, box, key, width, height, padding, hint_header, hint_side)
         diagnostics["cells"][key] = {"cell": record["box"], "data_zone": record["zone"],
+                                    "chart_type": record["subplot"]["chart"],
                                     "minimum": record["minimum"],
                                     "gutters": dict(record["gutters"]),
                                     "measured_gutters": dict(record["measured_gutters"]),

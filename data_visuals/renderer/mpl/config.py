@@ -69,6 +69,7 @@ class MplConfig:
         # ── font ──
         font = theme.get("font", {})
         raw_family = font.get("family", "Times New Roman, serif")
+        self.font_requested = raw_family
         # theme stores CSS-style "Times New Roman, serif"; split and resolve
         self.font_family = self._resolve_font(raw_family)
         self.title_weight = font.get("title_weight", "bold")

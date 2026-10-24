@@ -18,6 +18,7 @@ from data_visuals.core.config import FigureConfig, get_default_config, set_defau
 from data_visuals.core.spec import FigureSpec, SubplotSpec
 from data_visuals.core.figure import Figure, SubplotBuilder
 from data_visuals.core.panel import PanelContext, PanelResult
+from data_visuals.core.quality import FigureReport, FigureQualityError, QualityIssue, check_figure
 
 __all__ = [
     "Figure",
@@ -29,4 +30,8 @@ __all__ = [
     "set_default_config",
     "PanelContext",
     "PanelResult",
+    "FigureReport",
+    "FigureQualityError",
+    "QualityIssue",
+    "check_figure",
 ]
