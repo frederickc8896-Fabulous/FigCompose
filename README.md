@@ -75,6 +75,57 @@ fig.render("figure.png", dpi=300)
   `from data_visuals import list_color_presets` 可查询全部 12 套精选配色。
 - 导出支持 `.pdf`、`.svg`、`.png`。DPI 只改变 PNG 像素密度，不改变物理尺寸与版式。
 
+## 整篇论文复用一份配置
+
+`FigureConfig` 可同时交给简洁入口 `plot(..., config=paper)` 和高级入口 `Figure(config=paper)`。
+字体、色系、画布、图例、字段显示和系列身份只声明一次；单张图仍能覆盖默认值。
+
+```python
+import pandas as pd
+from data_visuals import FigureConfig, plot
+
+paper = FigureConfig(
+    canvas={"width": 180},  # 默认 mm；高度按内容求解
+    theme="modern", palette="curated-5-warm",
+    font_family="Times New Roman",
+    legend={"scope": "shared", "ncols": 3},
+    fields={
+        "epoch": {"label": "Training epoch", "format": ".0f"},
+        "f1": {"label": "F1 score", "unit": "%", "format": ".0%"},
+    },
+    series={"model": [
+        {"id": "base", "label": "Baseline", "marker": "o", "linestyle": "--"},
+        {"id": "large", "label": "Large model", "marker": "s", "linestyle": "-."},
+        {"id": "ours", "label": "Our method", "marker": "D", "linestyle": "-"},
+    ]},
+)
+
+data = pd.DataFrame({
+    "epoch": [1, 2, 1, 2, 1, 2],
+    "model": ["base", "base", "large", "large", "ours", "ours"],
+    "f1": [0.70, 0.76, 0.78, 0.83, 0.82, 0.89],
+})
+for name, frame in [("all", data), ("subset", data[data.model != "base"])]:
+    plot(frame, config=paper, x="epoch", group="model",
+         plots=[{"kind": "line", "metric": "f1"}],
+         title="Training comparison").render(f"{name}.pdf")
+
+paper.save("paper.yaml")  # 也支持 .yml / .json
+restored = FigureConfig.load("paper.yaml")
+```
+
+- **字段元信息**：`fields` 使用原始列名索引。`label` 用于轴标题和自动子标题，`unit` 附在轴标题后，`format` 控制数字显示。CSV 列名与数值保持原样。
+  `".0%"` 把 0–1 显示为百分比；`"{x:.0f}%"` 给已经是 0–100 的值加百分号。单位本身不触发缩放。
+  矩阵的数值格式也用于色条与注释；局部 `fmt` 只覆盖矩阵注释。归一化混淆矩阵和百分比堆叠不会继承原始数值单位。
+- **系列身份**：`series` 以 `group` 列名索引，按列表顺序分配原色系的颜色；可选 `color` 固定色号。
+  曲线、散点和雷达复用 `marker`，曲线与雷达复用 `linestyle`。不同 CSV 缺少某个系列时，保留其颜色位置，图例只显示实际出现的系列。
+  请登记该列的完整系列集合；未登记的 ID 会报错。原始 ID 与显示名分别保存，不根据 `ours` 等名称自动赋予样式。
+- **覆盖优先级**：默认主题 → 论文配置 → 单图调用 → 子图 `chart_opts`；既有 `category_colors` 覆盖登记的颜色，子图 `series_styles` 可继续覆盖。
+  图例仍可自由调整位置、列数、顺序与文字；`legend.order/labels` 可以使用原始系列 ID。
+- **配置文件**：JSON / YAML 都可校验后加载，未知字段会报错。数值型字典键请用 YAML 保存；JSON 会拒绝可能改变键类型的配置。
+
+单份配置可以描述比当前 CSV 更多的字段和系列。当前图没有使用的列不会参与计算；同一坐标轴上的多个指标若声明了冲突的单位或格式，需要明确覆盖或分轴。
+
 ## 图种与统计口径
 
 | 图种 | `kind` | 主要字段 | 默认行为与变体 |

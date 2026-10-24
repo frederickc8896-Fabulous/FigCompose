@@ -190,6 +190,9 @@ class FigureSpec:
 
     # Full category domains keep colours stable when subplots filter the data.
     color_domains: Dict[str, List[Any]] = field(default_factory=dict)
+    # A paper-wide identity registration reserves palette positions even when
+    # categories are absent from this Figure's data; ordinary domains sort.
+    series_order: Dict[str, List[Any]] = field(default_factory=dict)
     category_colors: Dict[str, Dict[str, str]] = field(default_factory=dict)
     # Optional repeated-panel headers and shared axis labels/limits.
     facets: Dict[str, Any] = field(default_factory=dict)
@@ -241,6 +244,7 @@ class FigureSpec:
             "font_family": self.font_family,
             "background": self.background,
             "color_domains": self.color_domains,
+            "series_order": self.series_order,
             "category_colors": self.category_colors,
             "facets": normalize_facets(self.facets),
             "subplots": [sp.to_dict(runtime=runtime) for sp in self.subplots],

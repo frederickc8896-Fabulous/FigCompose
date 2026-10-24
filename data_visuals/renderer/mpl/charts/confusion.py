@@ -23,7 +23,7 @@ def _draw_confusion(ax, sp, cfg, color_map):
     image = ax.imshow(np.ma.masked_invalid(matrix), aspect="auto", interpolation="nearest",
                       cmap=color_scheme(sp, cfg), norm=color_norm(sp))
     annotate_matrix(ax, image, matrix, sp, cfg,
-                    opts.get("fmt", ".2f" if opts.get("normalize") else ".0f"))
+                    opts.get("fmt", opts.get("value_format", ".2f" if opts.get("normalize") else ".0f")))
     matrix_ticks(ax, labels, labels, cfg)
     axis_labels(ax, sp)
     colorbar(ax, image, sp, cfg)

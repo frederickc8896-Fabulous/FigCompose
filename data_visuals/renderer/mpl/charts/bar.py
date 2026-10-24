@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib.ticker import PercentFormatter
 
 from .helpers import (axis_labels, frame, grouped, ordered, reference_lines,
-                      secondary_axis, series_color, value_column)
+                      secondary_axis, series_color, series_style, value_column)
 
 
 def _draw_bar(ax, sp, cfg, color_map):
@@ -23,7 +23,7 @@ def _draw_bar(ax, sp, cfg, color_map):
     if len(ys) > 1:
         series = [(name, df, name) for name in ys]
     else:
-        series = [(key, sub, ys[0]) for key, sub in grouped(df, g_col)]
+        series = [(key, sub, ys[0]) for key, sub in grouped(df, g_col, opts.get("series_order"))]
     count = len(series)
     width = cfg.bar_width_ratio / (1 if stacked else count)
     positive, negative = np.zeros(len(cases)), np.zeros(len(cases))
@@ -47,20 +47,24 @@ def _draw_bar(ax, sp, cfg, color_map):
                 if candidate in sub.columns:
                     errors = np.nan_to_num(np.abs(sub[candidate].to_numpy(dtype=float)))
                     break
-        color = series_color(key, index, cfg, color_map)
+        color = series_color(key, index, cfg, color_map, opts)
+        style = series_style(key, opts, measure=len(ys) > 1)
         bar_fn = ax.barh if horizontal else ax.bar
         kwargs = {"height" if horizontal else "width": width,
                   "left" if horizontal else "bottom": bottom,
                   "xerr" if horizontal else "yerr": errors}
         bars = bar_fn(locs, values, color=color,
-                      label=str(key) if key is not None else "_default",
+                      label=style.get("label", str(key) if key is not None else "_default"),
                       edgecolor=cfg.bar_stroke, linewidth=cfg.bar_stroke_width,
                       error_kw={"ecolor": cfg.error_bar_color, "elinewidth": cfg.error_bar_width,
                                 "capsize": cfg.axis_tick_size}, **kwargs)
         if key is not None:
+            bars._paperfig_legend_key = key
             handles.append(bars)
         if opts.get("show_value"):
-            labels = [format(v, opts.get("value_format", ".2f")) if np.isfinite(v) else ""
+            from data_visuals.core.identity import numeric_format_function
+            formatter = numeric_format_function(opts.get("value_format", ".2f"), "value_format")
+            labels = [formatter(v) if np.isfinite(v) else ""
                       for v in values]
             ax.bar_label(bars, labels=labels, label_type="center" if stacked else "edge",
                          padding=cfg.axis_label_padding if not stacked else 0,
@@ -91,7 +95,7 @@ def _draw_bar(ax, sp, cfg, color_map):
     if mapping.get("y2"):
         y2_col = value_column(df, mapping["y2"])
         twin = secondary_axis(ax, sp, cfg, mapping["y2"], horizontal)
-        for index, (_, sub) in enumerate(grouped(df, g_col)):
+        for index, (_, sub) in enumerate(grouped(df, g_col, opts.get("series_order"))):
             secondary = sub.groupby(x_col, sort=False)[y2_col].mean().reindex(cases)
             locs = positions if stacked else positions + (index - (count - 1) / 2) * width
             if horizontal:

@@ -20,7 +20,10 @@ def _draw_box(ax, sp, cfg, color_map):
     horizontal = opts.get("horizontal", False)
     categories = ordered(summary[x_col])
     cat_pos = {value: index for index, value in enumerate(categories)}
-    groups = ordered(summary[g_col]) if g_col and g_col in summary.columns else [None]
+    groups = ordered(summary[g_col], opts.get("series_order")) if g_col and g_col in summary.columns else [None]
+    if g_col and opts.get("series_order"):
+        ranks = {value: index for index, value in enumerate(groups)}
+        summary = summary.iloc[np.argsort(summary[g_col].map(ranks).to_numpy(), kind="stable")]
     offsets = {value: (index - (len(groups) - 1) / 2) * 0.6 / len(groups)
                for index, value in enumerate(groups)}
     width = 0.6 / len(groups)
@@ -36,7 +39,7 @@ def _draw_box(ax, sp, cfg, color_map):
     for _, row in summary.iterrows():
         group = row[g_col] if g_col and g_col in summary.columns else None
         center = cat_pos[row[x_col]] + offsets.get(group, 0)
-        color = series_color(group, groups.index(group), cfg, color_map)
+        color = series_color(group, groups.index(group), cfg, color_map, opts)
         q1, q3, median = row["Q1"], row["Q3"], row["median"]
         lower, upper = row.get("min", row.get("lower")), row.get("max", row.get("upper"))
         low_x, high_x = center - width / 2, center + width / 2
@@ -82,7 +85,7 @@ def _draw_box(ax, sp, cfg, color_map):
                 continue
             group = row[g_col] if g_col and g_col in outliers.columns else None
             center = cat_pos[row[x_col]] + offsets.get(group, 0)
-            color = series_color(group, groups.index(group), cfg, color_map)
+            color = series_color(group, groups.index(group), cfg, color_map, opts)
             x, y = (row[y_col], center) if horizontal else (center, row[y_col])
             ax.scatter(x, y, color=color, edgecolors="none", s=cfg.scatter_point_size,
                        alpha=0.8, zorder=5)
@@ -94,4 +97,5 @@ def _draw_box(ax, sp, cfg, color_map):
         axis_labels(ax, sp)
     ax.autoscale_view()
     mean = derived.get("overall_mean", {}).get(y_col)
-    return [*handles.values(), *reference_lines(ax, sp, cfg, mean=mean, horizontal=horizontal)]
+    return [*[handles[group] for group in groups if group in handles],
+            *reference_lines(ax, sp, cfg, mean=mean, horizontal=horizontal)]

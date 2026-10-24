@@ -15,12 +15,12 @@ def _draw_pie(ax, sp, cfg, color_map):
     mapping, opts = sp["data"], sp.get("options", {})
     group, value = mapping["group"], mapping.get("value")
     column = f"{value}_sum" if value else f"{group}_count"
-    categories = opts.get("order") or ordered(df[group])
+    categories = opts.get("order") or ordered(df[group], opts.get("series_order"))
     values = df.set_index(group).loc[categories, column].to_numpy(dtype=float)
     if (not np.isfinite(values).all() or (values < 0).any()
             or not np.isfinite(values.sum()) or values.sum() <= 0):
         raise ValueError("Pie/donut values must be finite, nonnegative and have a positive total.")
-    colors = [series_color(category, i, cfg, color_map or {}) for i, category in enumerate(categories)]
+    colors = [series_color(category, i, cfg, color_map or {}, opts) for i, category in enumerate(categories)]
     donut = sp.get("chart") == "donut"
     width = float(opts.get("width", 0.4)) if donut else None
     decimals = int(opts.get("percent_decimals", 0))

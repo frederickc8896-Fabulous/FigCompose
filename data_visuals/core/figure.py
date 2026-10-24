@@ -23,6 +23,7 @@ from typing import Optional, Dict, List, Any, Union, Tuple, Sequence
 from dataclasses import fields as dataclass_fields
 from collections.abc import Mapping
 from copy import deepcopy
+from numbers import Real
 import warnings
 
 import pandas as pd
@@ -31,6 +32,8 @@ import numpy as np
 from data_visuals.core.config import FigureConfig, get_default_config
 from data_visuals.core.canvas import normalize_canvas
 from data_visuals.core.legend import merge_legend, normalize_legend
+from data_visuals.core.identity import normalize_fields, normalize_series
+from data_visuals.core.metadata import field_label, resolve_field_options
 from data_visuals.core.spec import FigureSpec, SubplotSpec
 from data_visuals.core.panel import CustomPanel
 from data_visuals.charts import (
@@ -242,7 +245,7 @@ class Figure:
         legend_position: Optional[str] = None,
         # ── 高级 ──
         dpi: Optional[int] = None,
-        auto_margins: bool = True,
+        auto_margins: Optional[bool] = None,
     ) -> None:
         """构建 Figure 实例。
 
@@ -287,7 +290,9 @@ class Figure:
         self._data: Optional[pd.DataFrame] = data
 
         # ── 配置 ──
-        cfg = config or get_default_config()
+        cfg = config if config is not None else get_default_config()
+        if not isinstance(cfg, FigureConfig):
+            raise TypeError("config must be a FigureConfig; use FigureConfig.from_dict() or .load().")
 
         legacy_fields = {
             key for key, value in {"aspect": aspect, "base": base, "cell_base": cell_base}.items()
@@ -309,17 +314,19 @@ class Figure:
         self._base = base or cfg.base or "large"
         self._cell_base = cell_base or cfg.cell_base
         self._dpi = dpi if dpi is not None else cfg.dpi
-        self._title = title or cfg.title
+        self._title = title if title is not None else cfg.title
         self._legend_max_entries = legend_max_entries if legend_max_entries is not None else cfg.legend_max_entries
         self._legend_position = legend_position or cfg.legend_position
         self._legend = merge_legend(cfg.legend, legend)
-        self._auto_margins = auto_margins
+        self._auto_margins = cfg.auto_margins if auto_margins is None else auto_margins
         self._font_family = cfg.font_family
         self._background = cfg.background
         self._facets = deepcopy(cfg.facets)
         self._category_colors = {
             column: dict(colors) for column, colors in cfg.category_colors.items()
         }
+        self._fields = normalize_fields(cfg.fields)
+        self._series = normalize_series(cfg.series)
 
         # ── Layout 解析 ──
         self._layout_matrix = layout
@@ -743,13 +750,101 @@ class Figure:
             y_columns=None,
         )
 
+        # A paper registers raw identities per group column, independently of
+        # which CSV happens to be used by this Figure. Display labels never
+        # determine palette positions. Existing explicit labels take priority.
+        group_label_maps = {
+            column: {**{entry["id"]: entry["label"] for entry in entries}, **_label_map}
+            for column, entries in self._series.items()
+        }
+
+        def display(column, value):
+            return group_label_maps.get(column, _label_map).get(value, value)
+
+        active_groups = {chart.mapping.get("group") for chart in chart_specs.values()}
+        custom_categories: Dict[str, List[Any]] = {}
+        for decl in self._subplot_decls.values():
+            custom = decl.get("custom_panel")
+            if custom is not None and custom.color_group is not None:
+                active_groups.add(custom.color_group)
+                custom_categories.setdefault(custom.color_group, []).extend(custom.categories or ())
+        series_order = {}
+        registered_styles = {}
+        resolved_colors = {}
+        for column, entries in self._series.items():
+            if column not in active_groups:
+                continue
+            ids = {entry["id"] for entry in entries}
+            observed = list(custom_categories.get(column, []))
+            if df is not None and column in df.columns:
+                # pandas.unique/set collapse True into numeric ID 1. Validate
+                # raw observations before deduplicating semantic identities.
+                observed.extend(df[column].tolist())
+            unknown = [value for value in observed
+                       if isinstance(value, (bool, np.bool_)) or not isinstance(value, (str, Real))
+                       or pd.isna(value) or value not in ids]
+            unknown = list({(type(value).__name__, repr(value)): value for value in unknown}.values())
+            if unknown:
+                raise ValueError(
+                    f"series[{column!r}] has unregistered IDs: {unknown!r}; "
+                    "register the complete paper-wide domain to keep identities stable."
+                )
+            names = [display(column, entry["id"]) for entry in entries]
+            if len(set(names)) != len(names):
+                raise ValueError(f"series[{column!r}] labels must keep each registered identity distinct.")
+            series_order[column] = names
+            registered_styles[column] = {}
+            for entry in entries:
+                name = display(column, entry["id"])
+                registered_styles[column][name] = {
+                    key: deepcopy(entry[key]) for key in ("color", "marker", "linestyle") if key in entry
+                }
+                if "color" in entry:
+                    resolved_colors.setdefault(column, {})[name] = entry["color"]
+        for column, colors in self._category_colors.items():
+            resolved_colors.setdefault(column, {}).update({display(column, value): color for value, color in colors.items()})
+        for column, styles in registered_styles.items():
+            for name, style in styles.items():
+                if name in resolved_colors.get(column, {}):
+                    style["color"] = resolved_colors[column][name]
+
+        def display_legend(options, column=None):
+            result = deepcopy(options)
+            def key(value):
+                if column is not None:
+                    return display(column, value)
+                candidates = set()
+                for group in active_groups:
+                    if group is None:
+                        continue
+                    domain = [entry["id"] for entry in self._series.get(group, [])]
+                    domain.extend(custom_categories.get(group, []))
+                    if df is not None and group in df.columns:
+                        domain.extend(df[group].dropna().unique().tolist())
+                    if value in domain:
+                        candidates.add(display(group, value))
+                if len(candidates) > 1:
+                    raise ValueError(
+                        f"Global legend key {value!r} has different display names across groups; "
+                        "configure chart_opts.legend separately for those panels."
+                    )
+                return next(iter(candidates), value)
+            if result.get("order"):
+                result["order"] = [key(value) for value in result["order"]]
+            if result.get("labels"):
+                result["labels"] = {key(value): label for value, label in result["labels"].items()}
+            return result
+
+        resolved_legend = display_legend(self._legend)
+
         # 应用映射到 computed data
         for (row, col), cdf in list(computed.items()):
             chart = chart_specs.get((row, col))
             group_col = chart.mapping.get("group") if chart else None
-            if group_col and group_col in cdf.columns and _label_map:
+            labels = group_label_maps.get(group_col, _label_map)
+            if group_col and group_col in cdf.columns and labels:
                 cdf = cdf.copy()
-                cdf[group_col] = cdf[group_col].map(_label_map).fillna(cdf[group_col])
+                cdf[group_col] = cdf[group_col].map(labels).fillna(cdf[group_col])
                 identity = ([group_col, chart.mapping["x"]] if chart.chart_type == "radar"
                             else [group_col])
                 if chart.chart_type in {"pie", "donut", "radar"} and cdf.duplicated(identity).any():
@@ -758,20 +853,20 @@ class Figure:
                         "请为每个类别指定不同的显示名，或先在数据层明确合并。"
                     )
                 computed[(row, col)] = cdf
-            if group_col and _label_map:
+            if group_col and labels:
                 for name, payload in derived[(row, col)].items():
                     if isinstance(payload, pd.DataFrame) and group_col in payload.columns:
                         payload = payload.copy()
-                        payload[group_col] = payload[group_col].map(_label_map).fillna(payload[group_col])
+                        payload[group_col] = payload[group_col].map(labels).fillna(payload[group_col])
                         derived[(row, col)][name] = payload
 
         # Reserve colours from the full source domain before subplot filtering.
-        color_domains: Dict[str, List[Any]] = {}
+        color_domains: Dict[str, List[Any]] = deepcopy(series_order)
         for chart in chart_specs.values():
             group_col = chart.mapping.get("group")
             if group_col and group_col in df.columns and group_col not in color_domains:
                 values = df[group_col].dropna().unique().tolist()
-                mapped = [_label_map.get(value, value) for value in values]
+                mapped = [display(group_col, value) for value in values]
                 color_domains[group_col] = sorted(
                     dict.fromkeys(mapped), key=lambda value: (type(value).__name__, str(value))
                 )
@@ -789,12 +884,12 @@ class Figure:
                     raw_values.extend(df[group].dropna().unique().tolist())
                 aliases = category_aliases.setdefault(group, {})
                 aliases.update({
-                    value: _label_map[value] for value in raw_values
-                    if value in _label_map and _label_map[value] != value
+                    value: display(group, value) for value in raw_values
+                    if display(group, value) != value
                 })
                 domain = color_domains.setdefault(group, [])
                 for value in custom.categories or ():
-                    canonical = _label_map.get(value, value)
+                    canonical = display(group, value)
                     if canonical not in domain:
                         domain.append(canonical)
 
@@ -812,11 +907,13 @@ class Figure:
             chart = chart_specs.get((row, col))
             custom = decl.get("custom_panel")
             options = decl.get("chart_opts") or {}
+            g = custom.color_group if custom is not None else chart.mapping.get("group")
             legend_options = merge_legend(
-                self._legend, options.get("legend"), panel_explicit="legend" in options,
+                resolved_legend,
+                display_legend(options["legend"], g) if "legend" in options else None,
+                panel_explicit="legend" in options,
             )
             panel_legends[(row, col)] = legend_options
-            g = custom.color_group if custom is not None else chart.mapping.get("group")
             measures = None if custom is not None else chart.mapping.get("y")
             measure_count = len(measures) if isinstance(measures, (list, tuple)) else 0
             if custom is not None:
@@ -969,7 +1066,37 @@ class Figure:
                     else:
                         chart_opts.update(decl["chart_opts"])
                 if chart.chart_type in {"pie", "donut"} and chart_opts.get("order"):
-                    chart_opts["order"] = [_label_map.get(value, value) for value in chart_opts["order"]]
+                    chart_opts["order"] = [display(chart.mapping.get("group"), value) for value in chart_opts["order"]]
+                group = chart.mapping.get("group")
+                if group in series_order:
+                    chart_opts["series_order"] = list(series_order[group])
+                styles = deepcopy(registered_styles.get(group, {}))
+                explicit_styles = chart_opts.get("series_styles", {})
+                if not isinstance(explicit_styles, Mapping):
+                    raise ValueError("series_styles must map group values to styling dictionaries")
+                for value, style in explicit_styles.items():
+                    if not isinstance(style, Mapping):
+                        raise ValueError("Each series_styles entry must be a styling dictionary")
+                    name = display(group, value)
+                    styles[name] = {**styles.get(name, {}), **deepcopy(style)}
+                if styles:
+                    chart_opts["series_styles"] = styles
+                if "legend" in chart_opts:
+                    chart_opts["legend"] = display_legend(normalize_legend(chart_opts["legend"]), group)
+                chart_opts = resolve_field_options(
+                    chart.chart_type, chart.mapping, chart_opts, self._fields, data=panel_data[(r, c)],
+                )
+                measures = chart.mapping.get("y")
+                secondary = chart.mapping.get("y2")
+                if isinstance(measures, (list, tuple)) or secondary:
+                    measure_columns = list(measures) if isinstance(measures, (list, tuple)) else [measures]
+                    if secondary:
+                        measure_columns.append(secondary)
+                    names = {value: field_label(value, self._fields, include_unit=False)
+                             for value in measure_columns if value in self._fields}
+                    if names:
+                        chart_opts["measure_labels"] = {**names, **chart_opts.get("measure_labels", {})}
+                validate_axis_options(chart.chart_type, chart_opts)
                 sp = SubplotSpec(
                     row=r,
                     col=c,
@@ -993,16 +1120,22 @@ class Figure:
                 )
             elif decl and decl["chart_type"] == "custom":
                 custom_mapping = dict(decl["mapping"])
-                aliases = category_aliases.get(decl["custom_panel"].color_group)
+                group = decl["custom_panel"].color_group
+                aliases = category_aliases.get(group)
                 if aliases:
                     custom_mapping["category_aliases"] = dict(aliases)
+                custom_options = deepcopy(decl.get("chart_opts") or {})
+                if group in series_order:
+                    custom_options["series_order"] = list(series_order[group])
+                if "legend" in custom_options:
+                    custom_options["legend"] = display_legend(custom_options["legend"], group)
                 sp = SubplotSpec(
                     row=r, col=c,
                     row_span=cell.get("row_span", 1),
                     col_span=cell.get("col_span", 1),
                     chart_type="custom",
                     data_mapping=custom_mapping,
-                    chart_options=dict(decl.get("chart_opts") or {}),
+                    chart_options=custom_options,
                     title=decl.get("title"),
                     x=cell["x"], y=cell["y"], w=cell["w"], h=cell["h"],
                     font_sizes=cell.get("font_sizes", {}),
@@ -1053,14 +1186,12 @@ class Figure:
             font_family=self._font_family,
             background=self._background,
             color_domains=color_domains,
-            category_colors={
-                column: {_label_map.get(value, value): color for value, color in colors.items()}
-                for column, colors in self._category_colors.items()
-            },
+            series_order=series_order,
+            category_colors=resolved_colors,
             facets=deepcopy(self._facets),
             subplots=subplots,
             shared_legend=merged_shared_legend,
-            legend=deepcopy(self._legend),
+            legend=resolved_legend,
             _source_data=df,
         )
 

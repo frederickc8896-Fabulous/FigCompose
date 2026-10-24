@@ -38,6 +38,14 @@ def _sort_values(values):
     return sorted(set(values), key=lambda v: (type(v).__name__, str(v)))
 
 
+def _series_values(values, order=None):
+    result = _sort_values(values)
+    if order:
+        ranks = {key: index for index, key in enumerate(order)}
+        result.sort(key=lambda key: ranks.get(key, len(ranks)))
+    return result
+
+
 def _text_width(renderer, text, prop):
     return max((renderer.get_text_width_height_descent(line, prop, False)[0]
                 for line in str(text).split("\n")), default=0)
@@ -97,7 +105,7 @@ def _legend_entries(handles, options, subplot=None):
                 aliases[style.get("label", str(key))] = key
     entries = [(getattr(handle, "_paperfig_legend_key", aliases.get(handle.get_label(), handle.get_label())),
                 handle, handle.get_label()) for handle in handles]
-    order = options.get("order") or []
+    order = options.get("order") or (subplot.get("options", {}).get("series_order") if subplot else []) or []
     ranks = {value: i for i, value in enumerate(order)}
     entries.sort(key=lambda entry: ranks.get(entry[0], len(ranks)))
     labels = options.get("labels") or {}
@@ -142,20 +150,20 @@ def _shared_legend_blocks(fig, spec, cfg, group_cells, shared, maps, width, padd
         # Custom content supplies actual glyphs. Statistical glyphs keep their
         # existing construction and take priority for repeated semantic keys.
         chart_cells = [sp for sp in cells if sp["chart"] != "custom"]
-        visible = (_sort_values(name for sp in chart_cells for name in sp["data"]["y"])
+        visible = (_series_values((name for sp in chart_cells for name in sp["data"]["y"]),
+                                  spec.get("series_order", {}).get(column))
                    if column == "__measures__" else
-                   _sort_values(row[column] for sp in chart_cells
-                                for row in sp.get("computed_data", []) if column in row))
+                   _series_values((row[column] for sp in chart_cells
+                                   for row in sp.get("computed_data", []) if column in row),
+                                  spec.get("series_order", {}).get(column)))
         color_map = maps.get(column, {})
         if chart_cells and all(sp["chart"] == "scatter" for sp in chart_cells):
             handles = _shared_scatter_legend(chart_cells, visible, color_map, cfg)
         elif chart_cells and all(sp["chart"] in ("line", "radar") for sp in chart_cells):
-            markers = [sp.get("options", {}).get("markers", True) for sp in chart_cells]
-            handles = [Line2D([], [], color=color_map[v], marker="o" if all(markers) else None,
-                              linewidth=cfg.line_stroke_width, markersize=math.sqrt(cfg.marker_size),
-                              label=str(v)) for v in visible]
-            for handle, value in zip(handles, visible):
-                handle._paperfig_legend_key = value
+            handles = _shared_styled_legend(chart_cells, visible, color_map, cfg)
+        elif chart_cells and any(sp.get("options", {}).get("series_styles")
+                                 or sp.get("options", {}).get("measure_labels") for sp in chart_cells):
+            handles = _shared_styled_legend(chart_cells, visible, color_map, cfg)
         else:
             handles = [Patch(facecolor=color_map[v], edgecolor=cfg.bar_stroke,
                              linewidth=.5, label=str(v)) for v in visible]
@@ -170,7 +178,10 @@ def _shared_legend_blocks(fig, spec, cfg, group_cells, shared, maps, width, padd
                 if label and not label.startswith("_") and key not in seen:
                     handles.append(handle)
                     seen.add(key)
-        handles, labels = _legend_entries(handles, options)
+        entry_options = options
+        if not options.get("order") and spec.get("series_order", {}).get(column):
+            entry_options = {**options, "order": spec["series_order"][column]}
+        handles, labels = _legend_entries(handles, entry_options)
         if not handles:
             continue
         legend = MeasuredLegend(fig, handles, labels, options, cfg,
@@ -261,7 +272,7 @@ def _colour_maps(spec, cfg):
             domains["__measures__"].extend(sp["data"]["y"])
     maps = {}
     for column, values in domains.items():
-        values = _sort_values(values)
+        values = _series_values(values, spec.get("series_order", {}).get(column))
         if values:
             palette = cfg.get_palette(len(values))
             overrides = spec.get("category_colors", {}).get(column, {})
@@ -504,6 +515,70 @@ def _share_facet_axes(records, options):
         getattr(axes[0], f"set_{name}lim")(limits)
 
 
+class _CompositeLegendGlyph(tuple):
+    """Let a shared category key show both its fill and line/marker semantics."""
+
+    def get_label(self):
+        return self[0].get_label()
+
+
+def _observes(sp, value):
+    group = sp["data"].get("group")
+    if group:
+        return any(row.get(group) == value for row in sp.get("computed_data", []))
+    return value in sp["data"].get("y", [])
+
+
+def _shared_styled_legend(cells, visible, color_map, cfg):
+    """Build glyphs from effective styles and refuse contradictory identities."""
+    from data_visuals.renderer.mpl.charts.helpers import line_legend_handle, series_style
+    from data_visuals.renderer.mpl.charts.scatter import scatter_legend_handle
+    handles = []
+    for value in visible:
+        lines, markers, patches, colors, labels = [], [], [], [], []
+        for sp in cells:
+            if not _observes(sp, value):
+                continue
+            opts = sp.get("options", {})
+            measure = not sp["data"].get("group")
+            style = series_style(value, opts, measure=measure)
+            color = style.get("color", color_map[value])
+            colors.append(to_rgba(color))
+            labels.append(style.get("label", str(value)))
+            if sp["chart"] in ("line", "radar"):
+                lines.append(line_legend_handle(value, color, opts, cfg, radar=sp["chart"] == "radar", measure=measure))
+            elif sp["chart"] == "scatter":
+                markers.append(scatter_legend_handle(value, color, style, cfg))
+            else:
+                patches.append(Patch(facecolor=color, edgecolor=cfg.bar_stroke, linewidth=.5,
+                                     label=style.get("label", str(value))))
+        if any(color != colors[0] for color in colors[1:]) or any(label != labels[0] for label in labels[1:]):
+            raise ValueError(f"Shared legend has inconsistent series_styles for {value!r}")
+        line_signatures = [(repr(h.get_marker()), repr(h._unscaled_dash_pattern), h.get_linewidth(),
+                            h.get_markersize(), to_rgba(h.get_markerfacecolor()),
+                            to_rgba(h.get_markeredgecolor())) for h in lines]
+        if any(signature != line_signatures[0] for signature in line_signatures[1:]):
+            raise ValueError(f"Shared legend has inconsistent series_styles for {value!r}")
+        marker_signatures = [(repr(h.get_marker()), h.get_markersize(),
+                              to_rgba(h.get_markerfacecolor()), to_rgba(h.get_markeredgecolor())) for h in markers]
+        if any(signature != marker_signatures[0] for signature in marker_signatures[1:]):
+            raise ValueError(f"Shared legend has inconsistent series_styles for {value!r}")
+        if lines and markers and lines[0].get_marker() not in (None, "None", "", " "):
+            if repr(lines[0].get_marker()) != repr(markers[0].get_marker()):
+                raise ValueError(f"Shared legend has inconsistent series_styles for {value!r}")
+        glyphs = []
+        if patches:
+            glyphs.append(patches[0])
+        if lines:
+            glyphs.append(lines[0])
+        if markers and (not lines or lines[0].get_marker() in (None, "None", "", " ")):
+            glyphs.append(markers[0])
+        handle = glyphs[0] if len(glyphs) == 1 else _CompositeLegendGlyph(glyphs)
+        handle._paperfig_legend_key = value
+        handles.append(handle)
+    return handles
+
+
 def _shared_scatter_legend(cells, visible, color_map, cfg):
     """Match effective glyphs, including defaults, in every participating panel."""
     from data_visuals.renderer.mpl.charts.scatter import scatter_legend_handle
@@ -512,7 +587,8 @@ def _shared_scatter_legend(cells, visible, color_map, cfg):
         styles = sp.get("options", {}).get("series_styles", {})
         if not isinstance(styles, Mapping):
             raise ValueError("series_styles must map group values to marker styling")
-        declared_order.extend(value for value in styles if value in visible and value not in declared_order)
+        source_order = sp.get("options", {}).get("series_order") or list(styles)
+        declared_order.extend(value for value in source_order if value in visible and value not in declared_order)
     visible = declared_order + [value for value in visible if value not in declared_order]
     handles = []
     for value in visible:
@@ -764,6 +840,8 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
         uses_shared = group in shared and any(cell is sp for cell in group_cells[group])
         group_labels = {str(v) for v in maps.get(group, {})} if uses_shared else set()
         if uses_shared:
+            if group == "__measures__":
+                group_labels.update(str(label) for label in sp.get("options", {}).get("measure_labels", {}).values())
             group_labels.update(str(style.get("label")) for style in
                                 sp.get("options", {}).get("series_styles", {}).values() if style.get("label"))
             # Return-only custom handles may have no semantic colour group.

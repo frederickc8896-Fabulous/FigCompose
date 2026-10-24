@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from numbers import Real
+from collections.abc import Mapping
 
 import numpy as np
 import pandas as pd
 from matplotlib import colormaps
 from matplotlib.colors import LinearSegmentedColormap, Normalize, to_rgb
+from matplotlib.lines import Line2D
+from matplotlib.ticker import FuncFormatter
 
 from data_visuals.utils.colors import SEQUENTIAL_SCHEMES
 
@@ -16,23 +19,55 @@ def frame(rows):
     return rows.copy() if isinstance(rows, pd.DataFrame) else pd.DataFrame(rows)
 
 
-def ordered(values):
+def ordered(values, order=None):
     values = list(pd.unique(values))
     try:
-        return sorted(values)
+        values = sorted(values)
     except TypeError:
-        return sorted(values, key=lambda value: (type(value).__name__, str(value)))
+        values = sorted(values, key=lambda value: (type(value).__name__, str(value)))
+    if order:
+        ranks = {key: index for index, key in enumerate(order)}
+        values.sort(key=lambda key: ranks.get(key, len(ranks)))
+    return values
 
 
-def grouped(df, column):
+def grouped(df, column, order=None):
     if column and column in df.columns:
         return [(key, df[df[column].isna()] if pd.isna(key) else df[df[column] == key])
-                for key in ordered(df[column])]
+                for key in ordered(df[column], order)]
     return [(None, df)]
 
 
-def series_color(key, index, cfg, color_map):
-    return color_map.get(key, color_map.get(str(key), cfg.get_color(index)))
+def series_color(key, index, cfg, color_map, opts=None):
+    color = color_map.get(key, color_map.get(str(key), cfg.get_color(index)))
+    return series_style(key, opts).get("color", color) if opts is not None else color
+
+
+def series_style(key, opts, *, measure=False):
+    styles = opts.get("series_styles", {})
+    if not isinstance(styles, Mapping):
+        raise ValueError("series_styles must map group values to styling")
+    style = styles.get(key, styles.get(str(key), {}))
+    if not isinstance(style, Mapping):
+        raise ValueError("Each series style must be a mapping")
+    labels = opts.get("measure_labels", {}) if measure else {}
+    label = labels.get(key, labels.get(str(key)))
+    return {"label": label, **style} if label is not None else style
+
+
+def line_legend_handle(key, color, opts, cfg, *, radar=False, measure=False):
+    """A line glyph shared by drawing and legend construction."""
+    style = series_style(key, opts, measure=measure)
+    size = np.sqrt(style.get("size", cfg.marker_size))
+    if radar:
+        size = min(5.0, size)
+    return Line2D([], [], color=style.get("color", color),
+                  marker=style.get("marker", "o") if opts.get("markers", True) else None,
+                  linestyle=style.get("linestyle", "-"),
+                  linewidth=style.get("linewidth", cfg.line_stroke_width),
+                  markersize=size, markerfacecolor=style.get("facecolor", style.get("color", color)),
+                  markeredgecolor=style.get("edgecolor", style.get("color", color)),
+                  label=style.get("label", str(key) if key is not None else "_default"))
 
 
 def value_column(df, name, suffix="_mean"):
@@ -68,9 +103,14 @@ def secondary_axis(ax, sp, cfg, label, horizontal=False, color=None):
         spine.set_visible(name == ("top" if horizontal else "right"))
         spine.set_color(color)
     setter = twin.set_xlabel if horizontal else twin.set_ylabel
-    setter(str(label), fontsize=sp["font_sizes"]["axis_label"],
+    opts = sp.get("options", {})
+    setter(str(opts.get("y2label", label)), fontsize=sp["font_sizes"]["axis_label"],
            fontfamily=cfg.font_family, fontweight=cfg.axis_label_weight,
            color=color, labelpad=cfg.axis_title_padding)
+    if "y2format" in opts:
+        from data_visuals.core.identity import numeric_format_function
+        formatter = numeric_format_function(opts["y2format"], "y2format")
+        (twin.xaxis if horizontal else twin.yaxis).set_major_formatter(FuncFormatter(lambda value, _: formatter(value)))
     for tick in (twin.get_xticklabels() if horizontal else twin.get_yticklabels()):
         tick.set_family(cfg.font_family)
         tick.set_weight(cfg.tick_label_weight)
@@ -132,6 +172,16 @@ def colorbar(ax, image, sp, cfg):
     cax = ax.figure.add_axes(rect)
     cax._data_visuals_colorbar = True
     result = ax.figure.colorbar(image, cax=cax)
+    opts = sp.get("options", {})
+    if "value_format" in opts:
+        from data_visuals.core.identity import numeric_format_function
+        formatter = numeric_format_function(opts["value_format"], "value_format")
+        result.formatter = FuncFormatter(lambda value, _: formatter(value))
+        result.update_ticks()
+    if opts.get("value_label"):
+        result.set_label(opts["value_label"], fontsize=sp["font_sizes"]["axis_label"],
+                         fontfamily=cfg.font_family, color=cfg.text_color,
+                         labelpad=cfg.axis_title_padding)
     cax.tick_params(labelsize=sp.get("_colorbar_font_size", sp["font_sizes"]["tick"]),
                     color=cfg.axis_color, labelcolor=cfg.text_color,
                     width=cfg.axis_tick_width, length=cfg.axis_tick_size)
@@ -152,6 +202,8 @@ def _luminance(color):
 def annotate_matrix(ax, image, matrix, sp, cfg, fmt):
     if not sp.get("options", {}).get("annotate", True):
         return
+    from data_visuals.core.identity import numeric_format_function
+    formatter = numeric_format_function(fmt, "matrix format")
     for (row, col), value in np.ndenumerate(matrix):
         if not np.isfinite(value):
             continue
@@ -160,7 +212,7 @@ def annotate_matrix(ax, image, matrix, sp, cfg, fmt):
             fg = _luminance(color)
             return (max(lum, fg) + 0.05) / (min(lum, fg) + 0.05)
         text_color = max((cfg.text_color, cfg.background), key=contrast)
-        ax.text(col, row, format(value, fmt), ha="center", va="center",
+        ax.text(col, row, formatter(value), ha="center", va="center",
                 fontsize=sp["font_sizes"]["tick"], fontfamily=cfg.font_family,
                 fontweight=cfg.tick_label_weight, color=text_color)
 

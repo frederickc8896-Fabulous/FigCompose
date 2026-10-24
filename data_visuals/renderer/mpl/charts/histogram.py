@@ -21,8 +21,8 @@ def _draw_histogram(ax, sp, cfg, color_map):
     bins = np.histogram_bin_edges(values, bins=opts.get("bins", 20))
     density = frame(sp.get("derived_data", {}).get("density_data", [])) if use_density else frame([])
     handles = []
-    for index, (key, sub) in enumerate(grouped(df, g_col)):
-        color = series_color(key, index, cfg, color_map)
+    for index, (key, sub) in enumerate(grouped(df, g_col, opts.get("series_order"))):
+        color = series_color(key, index, cfg, color_map, opts)
         curve = density
         if not density.empty and key is not None and g_col in density:
             curve = density[density[g_col] == key]

@@ -4,19 +4,24 @@ core/config.py
 全局默认配置 — 为 FigureSpec 和 Figure 提供可全局覆盖的默认值。
 
 设计原则:
-    - 只进行字段校验与归一化，不执行数据计算或 I/O
+    - 字段校验与归一化不执行数据计算；save/load 显式读写论文配置
     - 用户可通过 Figure(config=...) 局部覆盖
 
 参考: 论文视觉规范 (Helvetica, minimal axis, 2pt line, no grid)
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Optional, Dict, List, Any
+from collections.abc import Mapping
+from copy import deepcopy
+from dataclasses import dataclass, field, fields as dataclass_fields
+import json
+from pathlib import Path
+from typing import Optional, Dict, Any
 
 from data_visuals.core.canvas import DEFAULT_CANVAS, normalize_canvas
 from data_visuals.core.facets import normalize_facets
 from data_visuals.core.legend import normalize_legend
+from data_visuals.core.identity import normalize_fields, normalize_series
 
 
 _UNSET = object()
@@ -25,9 +30,13 @@ _LEGACY_SIZE_DEFAULTS = {"aspect": "16:10", "base": "large", "cell_base": None}
 
 @dataclass
 class FigureConfig:
-    """Figure 级别的全局默认配置。
+    """可复用于整篇论文的 Figure 默认配置。
 
-    所有字段可被用户在 Figure() 构造时按需覆盖。
+    ``plot(..., config=paper)`` 与 ``Figure(config=paper)`` 共用此配置。
+    ``fields`` 按原始列名声明 label/unit/format，仅控制显示。
+    ``series`` 按分组列登记有序的 id/label/color/marker/linestyle，
+    在不同 CSV 子集间保留颜色位置与系列身份。单图参数和子图选项可继续覆盖。
+    ``save/load`` 显式保存、加载 JSON 或 YAML，不含数据和运行时绘图回调。
     """
 
     # ── 画布 ──
@@ -52,6 +61,8 @@ class FigureConfig:
     background: str = "#ffffff"
     category_colors: Dict[str, Dict[str, str]] = field(default_factory=dict)
     facets: Dict[str, Any] = field(default_factory=dict)
+    fields: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    series: Dict[str, list[Dict[str, Any]]] = field(default_factory=dict)
 
     # ── 高级 ──
     auto_margins: bool = True
@@ -62,6 +73,9 @@ class FigureConfig:
     def __post_init__(self) -> None:
         self.facets = normalize_facets(self.facets)
         self.legend = normalize_legend(self.legend)
+        self.fields = normalize_fields(self.fields)
+        self.series = normalize_series(self.series)
+        self.category_colors = deepcopy(self.category_colors)
         explicit = set()
         for key, default in _LEGACY_SIZE_DEFAULTS.items():
             value = getattr(self, key)
@@ -109,6 +123,8 @@ class FigureConfig:
             "background": self.background,
             "category_colors": self.category_colors,
             "facets": normalize_facets(self.facets),
+            "fields": normalize_fields(self.fields),
+            "series": normalize_series(self.series),
             "auto_margins": self.auto_margins,
             "autosize": self.autosize,
         }
@@ -118,18 +134,78 @@ class FigureConfig:
             for key in _LEGACY_SIZE_DEFAULTS:
                 result.pop(key)
             result["canvas"] = None if self.canvas is None else dict(self.canvas)
-        return result
+        return deepcopy(result)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "FigureConfig":
-        """从 dict 构建配置（用户覆盖用）。"""
-        valid_keys = {
-            "aspect", "base", "cell_base", "canvas", "dpi", "theme", "palette", "title",
-            "legend_max_entries", "legend_position", "legend",
-            "font_family", "background", "category_colors", "auto_margins", "autosize",
-            "facets",
-        }
-        return cls(**{k: v for k, v in d.items() if k in valid_keys})
+    def from_dict(cls, d: Mapping[str, Any]) -> "FigureConfig":
+        """从字典创建独立配置；未知字段报错，避免拼写错误被静默忽略。"""
+        if not isinstance(d, Mapping):
+            raise ValueError("FigureConfig must be a mapping.")
+        valid_keys = {item.name for item in dataclass_fields(cls) if item.init}
+        unknown = set(d) - valid_keys
+        if unknown:
+            raise ValueError(f"Unknown FigureConfig fields: {', '.join(sorted(map(str, unknown)))}")
+        return cls(**deepcopy(dict(d)))
+
+    def save(self, path: str | Path) -> Path:
+        """Save reusable configuration as UTF-8 JSON or safe YAML.
+
+        The filename must end in .json, .yaml or .yml. Parent directories must
+        already exist; this method never exports data or figure artists.
+        """
+        target = _config_path(path)
+        payload = self.to_dict()
+        if target.suffix.lower() == ".json":
+            _check_json_keys(payload)
+            content = json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+        else:
+            import yaml
+            content = yaml.safe_dump(payload, allow_unicode=True, sort_keys=False)
+        target.write_text(content, encoding="utf-8")
+        return target
+
+    @classmethod
+    def load(cls, path: str | Path) -> "FigureConfig":
+        """Load a validated JSON/YAML paper configuration without global effects."""
+        source = _config_path(path)
+        content = source.read_text(encoding="utf-8-sig")
+        if source.suffix.lower() == ".json":
+            try:
+                payload = json.loads(content)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSON FigureConfig in {source}: {exc.msg}") from exc
+        else:
+            import yaml
+            try:
+                payload = yaml.safe_load(content)
+            except yaml.YAMLError as exc:
+                raise ValueError(f"Invalid YAML FigureConfig in {source}: {exc}") from exc
+        return cls.from_dict(payload)
+
+
+def _config_path(path: str | Path) -> Path:
+    try:
+        result = Path(path)
+    except TypeError as exc:
+        raise ValueError("FigureConfig path must be a .json, .yaml or .yml filename.") from exc
+    if result.suffix.lower() not in {".json", ".yaml", ".yml"}:
+        raise ValueError("FigureConfig files must use .json, .yaml or .yml.")
+    return result
+
+
+def _check_json_keys(value: Any, context: str = "FigureConfig") -> None:
+    """Avoid JSON silently changing numeric/bool lookup keys into strings."""
+    if isinstance(value, Mapping):
+        if any(not isinstance(key, str) for key in value):
+            raise ValueError(
+                f"{context} contains non-string mapping keys; JSON would change their identity. "
+                "Save as .yaml/.yml to preserve keys, or use string IDs/keys."
+            )
+        for key, item in value.items():
+            _check_json_keys(item, f"{context}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _check_json_keys(item, f"{context}[{index}]")
 
 
 # ── 全局单例 ──────────────────────────────────────────────────

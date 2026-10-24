@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from numbers import Real
-from string import Formatter
 
 import numpy as np
 
@@ -50,25 +49,8 @@ def _sequence(value, name):
 
 
 def _format_function(value, name):
-    if not isinstance(value, str) or not value:
-        raise ValueError(f"{name} must be a nonempty Python numeric format, e.g. '.2f' or '{{x:.1f}}%'")
-    if "{" in value or "}" in value:
-        try:
-            fields = [(field, spec, conversion) for _, field, spec, conversion in Formatter().parse(value)
-                      if field is not None]
-        except ValueError as exc:
-            raise ValueError(f"{name} has an invalid numeric format") from exc
-        if (len(fields) != 1 or fields[0][0] != "x" or fields[0][2] is not None
-                or "{" in fields[0][1] or "}" in fields[0][1]):
-            raise ValueError(f"{name} templates require exactly one '{{x:...}}' field")
-        function = lambda number: value.format(x=number)
-    else:
-        function = lambda number: format(number, value)
-    try:
-        function(0.125)
-    except (ValueError, TypeError, KeyError, IndexError) as exc:
-        raise ValueError(f"{name} has an invalid numeric format: {value!r}") from exc
-    return function
+    from data_visuals.core.identity import numeric_format_function
+    return numeric_format_function(value, name)
 
 
 def validate_axis_options(kind, options):

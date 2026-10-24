@@ -11,14 +11,17 @@ import pandas as pd
 from data_visuals.charts import get_chart
 from data_visuals.core import Figure
 from data_visuals.core.canvas import normalize_canvas
-from data_visuals.core.config import get_default_config
+from data_visuals.core.config import FigureConfig, get_default_config
+from data_visuals.core.identity import normalize_fields
+from data_visuals.core.metadata import field_label
 from data_visuals.data.loader import load_csv
 from data_visuals.layout.panels import plan_panels
 from data_visuals.themes import load_theme
 from data_visuals.utils.colors import get_color_preset
 
 
-def _default_title(kind: str, declaration: dict[str, Any], index: int, count: int) -> str:
+def _default_title(kind: str, declaration: dict[str, Any], index: int, count: int,
+                   fields: Mapping[str, Any] | None = None) -> str:
     if kind == "histogram":
         metric = declaration.get("x", "")
     elif kind in {"pie", "donut"}:
@@ -26,10 +29,13 @@ def _default_title(kind: str, declaration: dict[str, Any], index: int, count: in
     elif kind == "heatmap":
         metric = declaration.get("value", "")
     elif kind == "confusion":
-        metric = f"{declaration.get('y', '')} × {declaration.get('x', '')}"
+        vertical = field_label(declaration.get("y", ""), fields or {}, include_unit=False)
+        horizontal = field_label(declaration.get("x", ""), fields or {}, include_unit=False)
+        metric = f"{vertical} × {horizontal}"
     else:
         metric = declaration.get("y", "")
-    text = ", ".join(map(str, metric)) if isinstance(metric, (list, tuple)) else str(metric)
+    names = metric if isinstance(metric, (list, tuple)) else [metric]
+    text = ", ".join(field_label(name, fields or {}, include_unit=False) for name in names)
     if count == 1:
         return text
     label = chr(ord("a") + index) if count <= 26 else str(index + 1)
@@ -48,6 +54,7 @@ def plot(
     palette: str | None = None,
     title: str | None = None,
     legend: Mapping[str, Any] | bool | None = None,
+    config: FigureConfig | None = None,
     csv_options: Mapping[str, Any] | None = None,
 ) -> Figure:
     """Describe a complete Figure with a CSV, metrics, plot kinds and a style.
@@ -64,6 +71,9 @@ def plot(
     ``legend`` optionally overrides shared/local placement, columns, labels,
     order, and spacing in points; ``False`` hides legends. Individual entries
     can override these fields through ``chart_opts={'legend': {...}}``.
+    ``config`` reuses a :class:`FigureConfig` across Figures: physical canvas,
+    typography, palette, legends, field labels/units/formats and series identity.
+    Explicit call arguments and panel options override those defaults.
 
     Global ``x`` and ``group`` are defaults for bar/line/box/scatter/radar.
     Pie/donut and histogram inherit only ``group``; matrix plots require explicit axes. An entry can
@@ -82,6 +92,10 @@ def plot(
     ``.render('figure.pdf')`` or ``.show()``. CSV reading options such as
     ``encoding`` and ``delimiter`` can be passed in ``csv_options``.
     """
+    cfg = config if config is not None else get_default_config()
+    if not isinstance(cfg, FigureConfig):
+        raise TypeError("config must be a FigureConfig; use FigureConfig.from_dict() or .load().")
+    fields = normalize_fields(cfg.fields)
     if not isinstance(plots, Sequence) or isinstance(plots, (str, bytes)):
         raise TypeError("plots 必须是子图声明列表，例如 [{'kind': 'bar', 'metric': 'accuracy'}]。")
     layout, positions, _ = plan_panels(len(plots), cols)
@@ -117,10 +131,10 @@ def plot(
         if "group" in (set(chart.required_fields) | set(chart.optional_fields)) and group is not None:
             declaration.setdefault("group", group)
         if "title" not in declaration:
-            declaration["title"] = _default_title(kind, declaration, index, len(plots))
+            declaration["title"] = _default_title(kind, declaration, index, len(plots), fields)
         declarations.append((kind, declaration))
 
-    selected_style = style if style is not None else get_default_config().theme
+    selected_style = style if style is not None else cfg.theme
     if not isinstance(selected_style, str) or not selected_style:
         raise TypeError("style 必须是风格名称，例如 'general' 或 'modern'。")
     load_theme(selected_style)
@@ -135,7 +149,7 @@ def plot(
     else:
         raise TypeError("data 必须是 CSV 路径或 pandas DataFrame。")
 
-    figure = Figure(data=frame, layout=layout, canvas=canvas, theme=selected_style,
+    figure = Figure(data=frame, layout=layout, canvas=canvas, theme=selected_style, config=cfg,
                     palette=palette, title=title, legend=legend)
     figure._auto_cols = cols
     for (row, col), (kind, declaration) in zip(positions, declarations):

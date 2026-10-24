@@ -15,7 +15,7 @@ from matplotlib.transforms import ScaledTranslation
 from .helpers import axis_labels, frame, grouped, secondary_axis, series_color, value_column
 
 
-_STYLE_KEYS = {"marker", "size", "color", "facecolor", "edgecolor", "linewidth", "zorder", "label"}
+_STYLE_KEYS = {"marker", "linestyle", "size", "color", "facecolor", "edgecolor", "linewidth", "zorder", "label"}
 
 
 def _number(value, name, *, minimum=None):
@@ -43,6 +43,11 @@ def _series_style(style):
             MarkerStyle(result["marker"])
         except (ValueError, TypeError) as exc:
             raise ValueError("series_styles.marker must be a Matplotlib marker") from exc
+    if "linestyle" in result:
+        try:
+            Line2D([], [], linestyle=result["linestyle"])
+        except (ValueError, TypeError) as exc:
+            raise ValueError("series_styles.linestyle must be a Matplotlib line style") from exc
     if "label" in result and not isinstance(result["label"], str):
         raise ValueError("series_styles.label must be a string")
     return result
@@ -209,7 +214,7 @@ def _draw_scatter(ax, sp, cfg, color_map):
             sizes = raw_sizes.fillna(0)
     handles, obstacles, errorbars = [], [], {}
     displaced_data = False
-    for index, (key, sub) in enumerate(grouped(df, g_col)):
+    for index, (key, sub) in enumerate(grouped(df, g_col, opts.get("series_order"))):
         color = series_color(key, index, cfg, color_map)
         style = styles.get(key, styles.get(str(key), {}))
         color = style.get("color", color)
@@ -267,7 +272,7 @@ def _draw_scatter(ax, sp, cfg, color_map):
         trend = frame(sp.get("derived_data", {}).get("trend_data", []))
         if not trend.empty:
             trend_col = "trend" if "trend" in trend.columns else y_col
-            for index, (key, sub) in enumerate(grouped(trend, g_col)):
+            for index, (key, sub) in enumerate(grouped(trend, g_col, opts.get("series_order"))):
                 sub = sub.sort_values(x_col, kind="stable")
                 color = series_color(key, index, cfg, color_map) if key is not None else cfg.trend_line_color
                 ax.plot(sub[x_col], sub[trend_col], color=color, linewidth=cfg.line_stroke_width)

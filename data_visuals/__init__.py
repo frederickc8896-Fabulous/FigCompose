@@ -10,6 +10,7 @@ Layout 决定"放哪里"，Theme 决定"长什么样"。
 __version__ = "0.1.0"
 
 from data_visuals.api import plot
+from data_visuals.core.config import FigureConfig
 from data_visuals.utils.colors import list_color_presets
 
-__all__ = ["plot", "list_color_presets", "__version__"]
+__all__ = ["plot", "FigureConfig", "list_color_presets", "__version__"]

@@ -19,7 +19,7 @@ def _draw_heatmap(ax, sp, cfg, color_map):
     matrix = df.pivot(index=y_col, columns=x_col, values=column).reindex(index=ys, columns=xs).to_numpy(dtype=float)
     image = ax.imshow(np.ma.masked_invalid(matrix), aspect="auto", interpolation="nearest",
                       cmap=color_scheme(sp, cfg), norm=color_norm(sp))
-    annotate_matrix(ax, image, matrix, sp, cfg, opts.get("fmt", ".2f"))
+    annotate_matrix(ax, image, matrix, sp, cfg, opts.get("fmt", opts.get("value_format", ".2f")))
     matrix_ticks(ax, xs, ys, cfg)
     axis_labels(ax, sp)
     colorbar(ax, image, sp, cfg)
