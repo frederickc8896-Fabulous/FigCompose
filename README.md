@@ -1,28 +1,35 @@
 # FigCompose
 
+**English** | [简体中文](README.zh-CN.md)
+
 Compose publication figures with Matplotlib.
 
-指定 CSV、指标、子图类型和风格，生成排版与配色统一的论文 Figure。
-FigCompose 以整张 Figure 为单位，统一管理物理尺寸、字号、分类颜色、共享图例与留白，
-减少组合不同图种时反复调整样式与间距的工作。
+Choose a CSV, metrics, chart types and a style to produce a figure with consistent layout and colors.
+FigCompose manages physical dimensions, font sizes, categorical colors, shared legends and spacing
+for the whole figure, reducing repeated style and spacing adjustments when combining chart types.
 
-- **声明式调用**：CSV 或 DataFrame 输入，选择列与图种，自动安排单图或多子图。
-- **整图样式**：12 套精选配色，保留原始色号与顺序；按物理尺寸排版，导出 PDF / SVG / PNG。
-- **原生扩展**：内置 10 类统计图，也可接入 Matplotlib 绘制函数，组合结构图、极坐标图或三维图。
+- **Describe a complete figure**: use a CSV or DataFrame, select metrics, chart types and a style, and arrange one or several panels automatically.
+- **Consistent physical layout**: mm / in canvases, fixed font sizes in pt, shared legends and measured margins, with PDF / SVG / PNG export.
+- **Reuse settings across a paper**: save fonts, a choice of 12 curated palettes, field display metadata and series identities. When a model is absent from another CSV, the remaining models retain their colors and markers.
+- **Measure and compare**: locate overflowing text, tick collisions and font-size issues, then save layout snapshots to check later changes.
+- **Extend with native Matplotlib**: 10 built-in chart types can share a figure with custom diagrams, polar plots and 3D plots.
 
-当前为 Alpha，接口仍在迭代。项目名称为 **FigCompose**，当前 Python 包名和导入路径为 `data_visuals`。
+This project is in Alpha; interfaces are still evolving. The project is named **FigCompose**;
+the Python package and import path are currently `data_visuals`.
 
-## 图表示例
+[Quick start](#quick-start) · [Paper configuration](#one-configuration-for-an-entire-paper) · [Chart types](#chart-types-and-aggregation) · [Figure checks](#figure-checks-and-layout-snapshots) · [Custom panels](#custom-matplotlib-panels) · [Color catalog](#color-catalog)
 
-![FigCompose 常用论文图表：分组柱状图及标准差、折线图、散点图、箱线图、直方图、热力图、混淆矩阵、环形图和雷达图](assets/readme/traditional_charts.png)
+## Gallery
 
-九个面板均通过 FigCompose 的声明式接口生成，共用字体、方法颜色与整图图例。
-数据为固定随机种子的合成示例；另支持饼图及下表中的图种变体。
-[查看矢量图](assets/readme/traditional_charts.svg) · [生成脚本](assets/readme/generate.py)
+![Common publication charts in FigCompose: grouped bars with standard deviation, lines, scatter, boxes, histogram, heatmap, confusion matrix, donut and radar](assets/readme/traditional_charts.png)
 
-## 安装
+All nine panels use FigCompose's declarative API, sharing fonts, method colors and a figure-level legend.
+The data are synthetic, generated with a fixed random seed. Pie charts and the variants listed below are also supported.
+[Vector image](assets/readme/traditional_charts.svg) · [Generation script](assets/readme/generate.py)
 
-需要 Python 3.10+。
+## Installation
+
+Requires Python 3.10+.
 
 ```bash
 git clone https://github.com/frederickc8896-Fabulous/FigCompose.git
@@ -30,13 +37,14 @@ cd FigCompose
 python -m pip install -e .
 ```
 
-默认字体为 **Times New Roman**，需由操作系统提供；缺少时回退其他衬线字体。
-跨设备精确复现版式需要一致的字体与依赖版本。当前通过 Python API 调用。
+The default font is **Times New Roman**, supplied by your operating system; other serif fonts are used as fallbacks.
+Matching fonts and dependency versions are needed to reproduce layouts precisely across devices.
+The current interface is a Python API.
 
-## 快速开始
+## Quick start
 
-下面的示例可直接运行；使用自己的数据时，将 `data` 替换为带表头的 CSV 路径，
-例如 `"results.csv"`，再指定对应列名即可。
+This example runs as written. To use your own data, replace `data` with a CSV path such as
+`"results.csv"`; the file should have a header row. Then select the corresponding column names.
 
 ```python
 import pandas as pd
@@ -50,7 +58,7 @@ data = pd.DataFrame({
 })
 
 fig = plot(
-    data,  # 或 "results.csv"
+    data,  # Or "results.csv"
     x="dataset", group="model",
     plots=[
         {"kind": "bar", "metric": "accuracy", "title": "(a) Accuracy",
@@ -67,25 +75,31 @@ fig.render("figure.pdf")
 fig.render("figure.png", dpi=300)
 ```
 
-- `plots` 每项对应一个子图；子图数量由列表长度决定，`cols=2` 可限制每行最多两个子图。
-- `x/group` 为全局默认列，子图可以覆盖；`group=None` 关闭该子图分组。
-- `canvas` 控制整张 Figure 的物理尺寸，默认宽 180 mm；只给宽度时测量后自动求高，也可指定 `unit="in"`。
-  `{"width": 180, "height": 110}` 固定整图尺寸，装不下时报告布局错误。
-- `style` 支持 `general`、`modern`；`palette` 独立选择配色。
-  `from data_visuals import list_color_presets` 可查询全部 12 套精选配色。
-- 导出支持 `.pdf`、`.svg`、`.png`。DPI 只改变 PNG 像素密度，不改变物理尺寸与版式。
+- Each entry in `plots` describes one panel; the list length determines the panel count. Use `cols=2` to allow at most two panels per row.
+- `x/group` provide default columns that individual panels can override. Set `group=None` in a panel to disable its grouping.
+- `canvas` sets the physical size of the entire figure. The default width is 180 mm; omit height to measure the content and solve for height automatically. Use `unit="in"` for inches.
+  `{"width": 180, "height": 110}` fixes both dimensions; a layout error is reported if the content cannot fit.
+- `style` supports `general` and `modern`; `palette` selects colors independently.
+  Import `list_color_presets` from `data_visuals` to list all 12 curated palettes.
+- Export to `.pdf`, `.svg` or `.png`. DPI changes PNG pixel density without changing physical dimensions or layout.
+- Pass CSV reading settings through `csv_options`, for example `{"encoding": "utf-8-sig", "delimiter": ","}`.
 
-## 整篇论文复用一份配置
+The main entry points are `plot()` to declare content, `FigureConfig` to reuse paper settings,
+`fig.render()` to export and `fig.check()` to inspect.
+Use `data_visuals.core.Figure` for panels spanning multiple cells, shared-axis grids or native drawing callbacks.
 
-`FigureConfig` 可同时交给简洁入口 `plot(..., config=paper)` 和高级入口 `Figure(config=paper)`。
-字体、色系、画布、图例、字段显示和系列身份只声明一次；单张图仍能覆盖默认值。
+## One configuration for an entire paper
+
+Use the same `FigureConfig` with `plot(..., config=paper)` and the advanced `Figure(config=paper)` API.
+Declare fonts, palette, canvas, legends, field display metadata and series identities once;
+individual figures can still override the defaults.
 
 ```python
 import pandas as pd
 from data_visuals import FigureConfig, plot
 
 paper = FigureConfig(
-    canvas={"width": 180},  # 默认 mm；高度按内容求解
+    canvas={"width": 180},  # Default unit: mm; height is solved from content
     theme="modern", palette="curated-5-warm",
     font_family="Times New Roman",
     legend={"scope": "shared", "ncols": 3},
@@ -107,74 +121,91 @@ data = pd.DataFrame({
 })
 for name, frame in [("all", data), ("subset", data[data.model != "base"])]:
     plot(frame, config=paper, x="epoch", group="model",
-         plots=[{"kind": "line", "metric": "f1"}],
+         plots=[{"kind": "line", "metric": "f1",
+                 "chart_opts": {"xticks": [1, 2]}}],
          title="Training comparison").render(f"{name}.pdf")
 
-paper.save("paper.yaml")  # 也支持 .yml / .json
+paper.save("paper.yaml")  # Also supports .yml / .json
 restored = FigureConfig.load("paper.yaml")
 ```
 
-- **字段元信息**：`fields` 使用原始列名索引。`label` 用于轴标题和自动子标题，`unit` 附在轴标题后，`format` 控制数字显示。CSV 列名与数值保持原样。
-  `".0%"` 把 0–1 显示为百分比；`"{x:.0f}%"` 给已经是 0–100 的值加百分号。单位本身不触发缩放。
-  矩阵的数值格式也用于色条与注释；局部 `fmt` 只覆盖矩阵注释。归一化混淆矩阵和百分比堆叠不会继承原始数值单位。
-- **系列身份**：`series` 以 `group` 列名索引，按列表顺序分配原色系的颜色；可选 `color` 固定色号。
-  曲线、散点和雷达复用 `marker`，曲线与雷达复用 `linestyle`。不同 CSV 缺少某个系列时，保留其颜色位置，图例只显示实际出现的系列。
-  请登记该列的完整系列集合；未登记的 ID 会报错。原始 ID 与显示名分别保存，不根据 `ours` 等名称自动赋予样式。
-- **覆盖优先级**：默认主题 → 论文配置 → 单图调用 → 子图 `chart_opts`；既有 `category_colors` 覆盖登记的颜色，子图 `series_styles` 可继续覆盖。
-  图例仍可自由调整位置、列数、顺序与文字；`legend.order/labels` 可以使用原始系列 ID。
-- **配置文件**：JSON / YAML 都可校验后加载，未知字段会报错。数值型字典键请用 YAML 保存；JSON 会拒绝可能改变键类型的配置。
+- **Field metadata**: `fields` is keyed by original column names. `label` supplies axis labels and automatic panel titles, `unit` is appended to the axis label, and `format` controls numeric display. CSV column names and values remain unchanged.
+  `".0%"` displays 0–1 values as percentages; `"{x:.0f}%"` adds a percent sign to values already on a 0–100 scale. The unit alone does not rescale data.
+  Matrix value formats also apply to colorbars and annotations; a local `fmt` overrides only matrix annotations. Normalized confusion matrices and percentage-stacked charts do not inherit the original value units.
+- **Series identity**: `series` is keyed by the `group` column. Its list order assigns positions in the original palette; optional `color` fixes an explicit color.
+  Lines, scatter and radar plots reuse `marker`; lines and radar plots reuse `linestyle`. A series missing from another CSV keeps its palette position, while legends show only the series present.
+  Palette capacity is checked against the complete registered set, including absent series.
+  Register the complete set for that column. When the group column is used, unknown IDs, null values and boolean IDs raise errors. Original IDs and display names are stored separately; names such as `ours` do not receive automatic styling.
+- **Override order**: theme defaults → paper configuration → figure call → panel `chart_opts`. Existing `category_colors` override registered colors; panel `series_styles` can override them further.
+  Legends remain adjustable in position, columns, order and labels. `legend.order/labels` accept original series IDs.
+- **Configuration files**: JSON / YAML files are validated on loading; unknown fields raise errors. Use YAML for numeric dictionary keys. JSON export rejects configurations whose key types could change.
 
-单份配置可以描述比当前 CSV 更多的字段和系列。当前图没有使用的列不会参与计算；同一坐标轴上的多个指标若声明了冲突的单位或格式，需要明确覆盖或分轴。
+A configuration may describe more fields and series than the current CSV contains. Columns unused by the figure do not take part in computation.
+If several metrics on one axis declare incompatible units or formats, provide an explicit override or separate axes.
+`plot()` selects a style with `style`; the corresponding configuration field is `FigureConfig.theme`.
 
-## 图种与统计口径
+## Chart types and aggregation
 
-| 图种 | `kind` | 主要字段 | 默认行为与变体 |
+| Chart | `kind` | Main fields | Default behavior and variants |
 |---|---|---|---|
-| 柱状图 | `bar` | `x`, `metric`, 可选 `group/error` | 按组取均值；支持误差线、水平柱、堆叠与百分比堆叠 |
-| 折线图 | `line` | `x`, `metric`, 可选 `group` | 重复 X 观测取均值；支持点标记、阶梯线与面积填充 |
-| 散点图 | `scatter` | `x`, `metric`, 可选 `group/size` | 保留观测；支持气泡大小与预计算区间 |
-| 箱线图 | `box` | `x`, `metric`, 可选 `group` | 按组展示分布；支持水平箱线与异常值点 |
-| 直方图 | `histogram` | `metric`, 可选 `group` | 支持分箱、密度曲线与累积分布 |
-| 热力图 | `heatmap` | `x`, `y`, `metric` | 按两维分组取均值，支持数值标注 |
-| 混淆矩阵 | `confusion` | `x`, `y`, 可选 `metric` | 计数或汇总给定数量，支持行归一化 |
-| 饼图 / 环形图 | `pie` / `donut` | `group`, 可选 `metric` | 按类别求和；省略份额列时计数 |
-| 雷达图 | `radar` | `x`, `metric`, 可选 `group` | 重复观测取均值，至少三个完整指标轴 |
+| Bar | `bar` | `x`, `metric`, optional `group/error` | Group means; error bars, horizontal bars, stacking and percentage stacking |
+| Line | `line` | `x`, `metric`, optional `group` | Mean of repeated X observations; markers, step lines and area fill |
+| Scatter | `scatter` | `x`, `metric`, optional `group/size` | Retains observations; bubble sizes and precomputed intervals |
+| Box | `box` | `x`, `metric`, optional `group` | Grouped distributions; horizontal boxes and outlier points |
+| Histogram | `histogram` | `metric`, optional `group` | Binning, density curves and cumulative distributions |
+| Heatmap | `heatmap` | `x`, `y`, `metric` | Means grouped along two dimensions; optional value annotations |
+| Confusion matrix | `confusion` | `x`, `y`, optional `metric` | Counts or sums supplied quantities; optional row normalization |
+| Pie / donut | `pie` / `donut` | `group`, optional `metric` | Category sums; counts rows when the value column is omitted |
+| Radar | `radar` | `x`, `metric`, optional `group` | Mean of repeated observations; at least three complete metric axes |
 
-`metric` 对普通图和雷达图表示 Y 值，对直方图表示分布值，对矩阵图和饼图表示数量或颜色值。
-饼图要求份额有限、非负且总和为正。雷达图使用长表，不自动归一化或补齐缺失指标。
+`metric` selects Y values for ordinary charts and radar plots, distribution values for histograms,
+and quantities or color values for matrix and pie charts.
+Pie shares must be finite and nonnegative, with a positive total. Radar plots use long-form data;
+they do not normalize values or fill missing metrics automatically.
 
-全图 `legend` 可设置共享或局部图例、位置、列数、字号、边框、顺序和显示名；
-子图通过 `chart_opts={"legend": {...}}` 覆盖，`legend=False` 隐藏图例。
-共享图例默认居中放在主标题下方、子图上方；显式设置 `position="bottom"` 等可调整位置。
-默认物理字号：主标题 11、子标题 9、轴标签 8、刻度 7、图例 8 pt，单图与多图保持一致。
+The figure-level `legend` controls shared or local legends, position, columns, font size, frame, order and display labels.
+Panels override it through `chart_opts={"legend": {...}}`; `legend=False` hides legends.
+Shared legends default to the center below the main title and above the panels; an explicit setting such as `position="bottom"` changes the position.
+For example, use `legend={"scope": "shared", "position": "bottom", "ncols": 3, "fontsize": 8}`;
+`chart_opts={"legend": {"position": "upper right"}}` gives an individual panel a local legend.
+Legend font sizes and spacing options such as `gap` use pt.
+Default physical font sizes are 11 pt for the main title, 9 for panel titles, 8 for axis labels,
+7 for ticks and 8 for legends, consistent across single-panel and multi-panel figures.
 
-## 坐标轴与紧凑排版
+## Axes and compact layout
 
-柱状、折线、散点、箱线和直方图共用 `chart_opts` 中的轴配置，显示名称可以独立于 CSV 列名：
+Bar, line, scatter, box and histogram plots share axis settings in `chart_opts`.
+Display labels can differ from CSV column names:
 
-| 选项 | 示例与含义 |
+| Option | Example and meaning |
 |---|---|
-| `xlabel` / `ylabel` | `"Accuracy (%)"`；空字符串隐藏轴标题 |
-| `xlim` / `ylim` | `[0, 100]`；固定范围，可使用倒序范围 |
-| `xticks` / `yticks` | `[0, 25, 50, 75, 100]`；固定刻度 |
-| `xticklabels` / `yticklabels` | 与对应刻度等长的显示文字 |
-| `xformat` / `yformat` | `".2f"` 保留两位小数；`".0%"` 将 0–1 显示为百分比；`"{x:.0f}%"` 为 0–100 数值添加百分号 |
-| `xscale` / `yscale` | `"linear"`、`"log"`、`"symlog"`；分类轴保留线性尺度 |
+| `xlabel` / `ylabel` | `"Accuracy (%)"`; an empty string hides the axis label |
+| `xlim` / `ylim` | `[0, 100]`; fixed limits, including reversed limits |
+| `xticks` / `yticks` | `[0, 25, 50, 75, 100]`; fixed tick positions |
+| `xticklabels` / `yticklabels` | Display strings matching the number of corresponding ticks |
+| `xformat` / `yformat` | `".2f"` for two decimal places; `".0%"` to display 0–1 as percentages; `"{x:.0f}%"` to append a percent sign to 0–100 values |
+| `xscale` / `yscale` | `"linear"`, `"log"`, `"symlog"`; categorical axes remain linear |
 
-热力图和混淆矩阵支持轴标题及刻度显示覆盖，保持分类矩阵范围；雷达图沿用径向 `ylim`。
-不适用或冲突的轴配置明确报错。水平柱图、水平箱线图的轴配置指屏幕上的 X/Y 轴。
+Heatmaps and confusion matrices allow axis label and tick display overrides while preserving categorical matrix limits.
+Radar plots retain their radial `ylim` option. Inapplicable or conflicting axis settings raise errors.
+For horizontal bar and box plots, these options refer to the on-screen X/Y axes.
 
-物理画布下，同类图保持绘图区对齐，混排时矩阵色条和圆形图外标签使用各自的留白；
-`FigureConfig.facets` 仍为比较图保留严格等大绘图区。
-布局实测后尝试回收多余留白，回收失败时恢复保守布局；自动高度综合考虑真实绘图区宽高。
-样式渲染隔离外部 Matplotlib 视觉设置，原生回调仍可显式调整自己的图元。
+With physical canvases, charts in the same family align their plotting areas. Matrix colorbars and round-chart external labels
+use separate margins in mixed figures; `FigureConfig.facets` preserves strictly equal plotting areas for comparison grids.
+The layout measures decorations and attempts to reclaim excess margins, falling back to the conservative layout if reclamation fails.
+Automatic height considers the actual plotting-area width and height.
+Rendering isolates visual settings from external Matplotlib configuration; native callbacks can still explicitly style their own artists.
+For comparison grids, use `FigureConfig(facets={"sharex": True, "sharey": True})` with a complete rectangular grid.
+Set these options to `False` for independent panel ranges. Explicit `xlim/ylim` remain authoritative;
+conflicting settings on shared axes raise errors.
 
-## 出图检查与布局快照
+## Figure checks and layout snapshots
 
-`fig.check()` 实测最终文字、字体和绘图区，不调整数据、字号、坐标范围或画布。
-可生成独立检查图，定位文字越界、刻度重叠、字号过小等问题：
+`fig.check()` measures final text, fonts and plotting areas without adjusting data, font sizes, axis ranges or canvas size.
+It can produce a separate inspection image to locate text overflow, tick overlap, small fonts and related issues:
 
 ```python
+from pathlib import Path
 import pandas as pd
 from data_visuals import plot
 
@@ -185,27 +216,38 @@ fig = plot(
 )
 report = fig.check(debug="layout_check.png")
 print(report.summary())
-report.raise_for_errors()  # 可选；include_warnings=True 也要求消除警告
-report.save("layout_baseline.json")  # 首次建立基线；后续检查保留此文件
+report.raise_for_errors()  # Optional; include_warnings=True also requires no warnings
 
-comparison = fig.check().compare("layout_baseline.json", tolerance=0.5)
-print(comparison.summary())
+baseline = Path("layout_baseline.json")
+if baseline.exists():
+    comparison = report.compare(baseline, tolerance=0.5)
+    print(comparison.summary())
+    comparison.save("layout_changes.json")
+    assert comparison.ok, comparison.summary()  # Optional: stop on layout changes
+else:
+    report.save(baseline)  # Establish once; later runs compare the existing file
 ```
 
-- `min_fontsize=7`、`min_tick_gap=1`、`tolerance=1` 均以 **pt** 衡量，可在 `check()` 中覆盖。
-  `report.ok` 表示没有错误；小字号、刻度与装饰重叠等警告仍列在报告中。
-- 报告含实际画布、各子图绘图区、文字边界、实际字体和颜色；调试图用蓝色虚线标记单元、绿色标记绘图区，橙色/红色框定位问题。支持 PNG / SVG / PDF，正式导出不带叠层。
-- `.compare()` 按已记录的物理位置、文字、字体和实际图元样式检查布局变化，默认允许 **0.5 pt 几何误差**；字号与颜色严格比较。DPI 不参与比较。这是布局快照，不是像素截图比较。
-- 已用 `mpl_fig = fig.render()` 做原生 Matplotlib 调整时，可用 `from data_visuals import check_figure`，再调用 `check_figure(mpl_fig)` 检查当前结果；该函数不关闭调用者的 Figure。
+- `min_fontsize=7`, `min_tick_gap=1` and `tolerance=1` all use **pt** and can be overridden in `check()`.
+  `report.ok` means there are no errors; `report.errors` and `report.warnings` expose errors and warnings separately.
+  Overflow is an error; small fonts, tick overlap and decoration overlap are warnings; font substitution is informational.
+  To check for a minimum font size of 8 pt, use `check(min_fontsize=8)`; the default 7 pt ticks will then be reported as warnings.
+- Reports include the actual canvas, panel plotting areas, text bounds, resolved fonts and colors. Debug images mark cells with blue dashed outlines, plotting areas in green, and issues with orange/red boxes. PNG / SVG / PDF are supported; normal exports have no debug overlays.
+- `.compare()` checks recorded physical positions, text, fonts and actual artist styles. The default geometric tolerance is **0.5 pt**; font sizes and colors are compared strictly. DPI is ignored. These are structural layout snapshots rather than pixel screenshot comparisons.
+- After native Matplotlib edits using `mpl_fig = fig.render()`, import `check_figure` from `data_visuals` and call `check_figure(mpl_fig)` to inspect the current result. The caller must then close it with `plt.close(mpl_fig)`. `fig.check()` manages and closes its own temporary figure.
 
-绘图区面积占比是矩形分配指标，不代表空白率或审美评分。检查不判断统计结论、数据图元重叠，
-也不保证结构图内部节点、连线或投影三维文字没有碰撞；具体覆盖限制写入报告。
-固定画布本身无法容纳内容时，仍抛出带尺寸提示的 `LayoutError`。
+Keep baseline files and update them explicitly after review. Check `comparison.ok` to stop subsequent steps when a regression is found.
+Use `FigureReport.load("layout_baseline.json")` to read a saved report.
 
-## 自定义 Matplotlib 面板
+The plotting-area fraction measures allocated rectangles; it is not a whitespace or aesthetic score.
+Checks do not assess statistical conclusions or overlap between data artists, and do not guarantee collision-free
+diagram nodes, connections or projected 3D text. Coverage limits are recorded in the report.
+If the content cannot fit a fixed canvas, a `LayoutError` still reports the size constraints.
 
-高级入口 `data_visuals.core.Figure` 支持跨格布局、宽高权重与原生绘制函数。
-纯自定义 Figure 不需要 CSV 或占位 DataFrame：
+## Custom Matplotlib panels
+
+The advanced `data_visuals.core.Figure` API supports panels spanning cells, width/height ratios and native drawing callbacks.
+A fully custom figure needs no CSV or placeholder DataFrame:
 
 ```python
 from data_visuals.core import Figure, PanelResult
@@ -223,35 +265,39 @@ paper[0, 0].custom(draw_module, min_size=(120, 70), preferred_aspect=2)
 paper.render("model.svg")
 ```
 
-`.custom()` 接受 `projection="polar"`、`"3d"` 或已注册的 Matplotlib 投影名，
-`axes_options` 传入原生轴构造参数。需要显示坐标轴时指定 `axes="on"`。
-`min_size` 使用 pt；`box_aspect` 表示面板绘图区的宽/高。
+`.custom()` accepts `projection="polar"`, `"3d"` or a registered Matplotlib projection name.
+Use `axes_options` for native axes constructor arguments, and `axes="on"` to show axes.
+`min_size` uses pt; `box_aspect` is the width/height ratio of the panel's plotting area.
 
-通过 `ctx.text_kwargs()`、`ctx.color()` 使用统一样式；通过 `PanelResult` 返回测量对象、
-图例句柄或 `layout(ax, ctx)` 尺寸更新函数。框架管理整图，回调负责内部节点与连线。
-自动尺寸试绘和正式导出会重新执行回调，回调应可重复构建且不产生外部副作用。
-自定义回调属于运行时对象，含回调的 Spec 不能序列化为 JSON。
+Use `ctx.text_kwargs()` and `ctx.color()` for consistent styling. Return measured artists,
+legend handles or a `layout(ax, ctx)` size-update callback through `PanelResult`.
+The framework manages the whole figure; the callback arranges its internal nodes and connections.
+Automatic-size probes and final exports rerun callbacks, so callbacks should rebuild cleanly without external side effects.
+Custom callbacks are runtime objects; Specs containing them cannot be serialized to JSON.
 
-## 项目范围
+## Project scope
 
-FigCompose 负责可复用的样式与整图排版。数据列、统计口径、坐标范围与图的科学表达由调用者确定；
-自定义结构图的内部节点与连线也由绘制函数安排。
+FigCompose manages reusable styles and figure-level layout. Callers choose data columns, statistical definitions,
+axis ranges and scientific presentation. Custom drawing callbacks also arrange their internal nodes and connections.
 
-仓库包含绘图库源码、主题、安装配置、本 README 及其展示素材；本地演示、输出、测试、详细文档和实验数据均已忽略。
-上面的示例自带数据，克隆并安装后即可运行。重新生成 README 图片：`python assets/readme/generate.py`。
+The repository includes library source, themes, installation metadata, Chinese and English READMEs and their gallery assets.
+Local demos, outputs, tests, detailed documentation and experimental data are ignored.
+The examples above include their own data and run after cloning and installing.
+Regenerate the README images with `python assets/readme/generate.py`.
 
-## 配色色卡
+## Color catalog
 
-### 分类色与整图预设
+### Categorical colors and figure presets
 
-以下 **12 套**预设直接引用 `data_visuals/utils/colors.py` 中的原始搭配，色号与顺序保持不变。
-在 `plot()` 中传入完整名称，例如 `palette="curated-5-warm"`；`style` 独立控制字体与排版。
-名称中的 2 / 5 / 7 / 10 表示类别容量：类别较少时取前几色，超出容量时需选择更大的预设。
-`cool`、`warm` 等名称沿用原配置，实际冷暖分布请以色卡为准。
+These **12 presets** reference the original combinations in `data_visuals/utils/colors.py`, preserving their hex values and order.
+Pass a full name to `plot()`, such as `palette="curated-5-warm"`; `style` controls typography and layout independently.
+The numbers 2 / 5 / 7 / 10 indicate category capacity: smaller category sets use the first colors;
+choose a larger preset when you exceed the capacity.
+Names such as `cool` and `warm` come from the original configuration; refer to the swatches for the actual color balance.
 
-![FigCompose 全部 12 套精选分类色卡，标注预设名和十六进制色号](assets/readme/color_presets.png)
+![All 12 FigCompose curated categorical palettes, with preset names and hexadecimal colors](assets/readme/color_presets.png)
 
-[查看矢量色卡](assets/readme/color_presets.svg)。可通过 `list_color_presets()` 查询所有名称：
+[Vector catalog](assets/readme/color_presets.svg). List every preset name with `list_color_presets()`:
 
 ```python
 from data_visuals import list_color_presets
@@ -259,12 +305,12 @@ from data_visuals import list_color_presets
 print(list_color_presets())
 ```
 
-### 连续色阶
+### Continuous color scales
 
-热力图和混淆矩阵默认使用整图预设配套的连续色阶，也可在子图中显式设置，
-例如 `chart_opts={"color_scheme": "blues"}`。
-下方展示全部 **5 套**原始色阶，渐变与原始色阶节点对应。
+Heatmaps and confusion matrices default to the continuous scale paired with the figure's palette.
+Override it per panel, for example with `chart_opts={"color_scheme": "blues"}`.
+All **5 original scales** appear below; gradients correspond to the original color stops.
 
-![FigCompose 连续色阶：warm-cool、coastal、blues、amber、rose，以及原始色号](assets/readme/color_schemes.png)
+![FigCompose continuous scales: warm-cool, coastal, blues, amber and rose, with their original hexadecimal colors](assets/readme/color_schemes.png)
 
-[查看矢量色卡](assets/readme/color_schemes.svg)
+[Vector catalog](assets/readme/color_schemes.svg)
