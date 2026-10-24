@@ -18,6 +18,8 @@ from matplotlib.transforms import Bbox
 from data_visuals.core.legend import normalize_legend
 from data_visuals.layout.placement import LayoutError, align_gutters, cell_boxes, inset_box
 from data_visuals.renderer.mpl.config import MplConfig
+from data_visuals.renderer.mpl.styling import style_axis as _style_axis
+from data_visuals.renderer.mpl.axes import apply_axis_options, validate_axis_options
 from data_visuals.renderer.mpl.charts.registry import _BUILDERS
 from data_visuals.renderer.mpl.custom import (
     prepare_custom_panels, position_custom, custom_bounds, place_custom_title,
@@ -297,41 +299,6 @@ def _continuous_limits(subplots):
             sp["_color_limits"] = (low, high) if low != high else (low - 0.5, high + 0.5)
 
 
-def _style_axis(ax, fs, cfg, secondary=False):
-    ax.set_facecolor(cfg.background)
-    for spine in ax.spines.values():
-        spine.set_color(cfg.axis_domain_color)
-        spine.set_linewidth(cfg.axis_domain_width)
-    ax.tick_params(labelsize=fs["tick"], width=cfg.axis_tick_width, length=cfg.axis_tick_size,
-                   pad=cfg.axis_label_padding,
-                   **({} if secondary else {"colors": cfg.text_color}))
-    if ax.name == "3d":
-        # Axes3D.grid does not accept the Cartesian grid styling contract.
-        ax.grid(cfg.axis_grid and not secondary)
-        for axis in ax._axis_map.values():
-            axis.line.set_color(cfg.axis_domain_color)
-            axis.line.set_linewidth(cfg.axis_domain_width)
-    elif secondary:
-        ax.grid(False)
-    else:
-        ax.set_axisbelow(True)
-        ax.grid(cfg.axis_grid, **({"color": cfg.axis_grid_color, "alpha": cfg.grid_opacity,
-                                  "linewidth": 0.5} if cfg.axis_grid else {}))
-    axes = list(ax._axis_map.values())
-    for label in [label for axis in axes for label in axis.get_ticklabels()]:
-        label.set_fontfamily(cfg.font_family)
-        label.set_fontweight(cfg.tick_label_weight)
-    for label in (axis.label for axis in axes):
-        label.set_fontsize(fs["axis_label"])
-        label.set_fontfamily(cfg.font_family)
-        label.set_fontweight(cfg.axis_label_weight)
-        if not secondary:
-            label.set_color(cfg.text_color)
-    for text in (axis.get_offset_text() for axis in axes):
-        text.set_fontsize(fs["tick"])
-        text.set_fontfamily(cfg.font_family)
-
-
 def _fit_ticks(ax, width, renderer, cfg, fs):
     if not getattr(ax, "_data_visuals_categorical_x", False):
         return
@@ -362,9 +329,11 @@ def _fit_ticks(ax, width, renderer, cfg, fs):
     # For vertical labels align the *rotated* bounding box below the ticks.
     # Anchoring an unrotated, horizontally centered label at 90 degrees leaves
     # half of its text above the baseline, inside the data region.
+    limits = ax.get_xlim()
     ax.set_xticks(positions, labels, rotation=angle,
                   ha="center" if angle in (0, 90) else "right", va="top",
                   rotation_mode="default" if angle == 90 else "anchor")
+    ax.set_xlim(limits, auto=None)
 
 
 def figure_to_matplotlib(spec) -> plt.Figure:
@@ -387,7 +356,16 @@ def figure_to_matplotlib(spec) -> plt.Figure:
         try:
             fig.patch.set_facecolor(cfg.background)
             fig._data_visuals_rcparams = cfg.rcparams()
-            return _render(fig, d, cfg, width, height)
+            try:
+                return _render(fig, d, cfg, width, height)
+            except LayoutError:
+                if not getattr(fig, "_data_visuals_reclaiming", False):
+                    raise
+                # A reclamation probe is optional. Rebuild once with the
+                # conservative solver if a locator, legend or native aspect
+                # rejects the probe; never lose an already feasible canvas.
+                fig.clear()
+                return _render(fig, d, cfg, width, height, allow_reclaim=False)
         except BaseException:
             plt.close(fig)
             raise
@@ -456,25 +434,73 @@ def _share_facet_axes(records, options):
     for name in ("x", "y"):
         if not options.get(f"share{name}"):
             continue
+        scales = {getattr(record["axes"], f"get_{name}scale")() for record in ordered}
+        if len(scales) != 1:
+            raise ValueError(f"Shared facet {name} axes require identical {name}scale values")
+        formats = {record["subplot"]["options"][f"{name}format"] for record in ordered
+                   if f"{name}format" in record["subplot"].get("options", {})}
+        if len(formats) > 1:
+            raise ValueError(f"Shared facet {name} axes require identical {name}format values")
+        formatter = next((getattr(record["axes"], f"{name}axis").get_major_formatter()
+                          for record in ordered
+                          if f"{name}format" in record["subplot"].get("options", {})), None)
         explicit = [tuple(record["subplot"].get("options", {})[f"{name}lim"])
                     for record in ordered if f"{name}lim" in record["subplot"].get("options", {})]
         if explicit and any(limits != explicit[0] for limits in explicit[1:]):
             raise ValueError(f"Shared facet {name} axes require identical explicit {name}lim values")
-        ticks = [record["subplot"].get("options", {})[f"{name}ticks"]
+        ticks = [list(record["subplot"].get("options", {})[f"{name}ticks"])
                  for record in ordered if f"{name}ticks" in record["subplot"].get("options", {})]
-        if ticks and any(list(values) != list(ticks[0]) for values in ticks[1:]):
+        if ticks and any(values != ticks[0] for values in ticks[1:]):
             raise ValueError(f"Shared facet {name} axes require identical {name}ticks values")
-        tick_labels = [record["subplot"].get("options", {})[f"{name}ticklabels"]
+        tick_labels = [list(record["subplot"].get("options", {})[f"{name}ticklabels"])
                        for record in ordered if f"{name}ticklabels" in record["subplot"].get("options", {})]
         if tick_labels and any(values != tick_labels[0] for values in tick_labels[1:]):
             raise ValueError(f"Shared facet {name} axes require identical {name}ticklabels values")
+        if formats and tick_labels:
+            raise ValueError(f"Shared facet {name} axes cannot combine {name}format with {name}ticklabels")
         axes = [record["axes"] for record in ordered]
         bounds = [getattr(ax, f"get_{name}lim")() for ax in axes]
         limits = explicit[0] if explicit else (min(b[0] for b in bounds), max(b[1] for b in bounds))
+        # Categorical wrapping runs again during layout. Its per-panel cache
+        # must describe the shared labels, including hidden outer tick labels;
+        # otherwise a later panel can restore its old names to every sibling.
+        raw_ticks = None
+        if name == "x" and any(getattr(ax, "_data_visuals_categorical_x", False) for ax in axes):
+            if ticks:
+                positions = list(ticks[0])
+                if tick_labels:
+                    labels = list(tick_labels[0])
+                else:
+                    source = next(record["axes"] for record in ordered
+                                  if f"{name}ticks" in record["subplot"].get("options", {}))
+                    cached = getattr(source, "_data_visuals_raw_ticks", None)
+                    if cached and list(cached[0]) == positions and len(cached[1]) == len(positions):
+                        labels = list(cached[1])
+                    else:
+                        source_formatter = source.xaxis.get_major_formatter()
+                        labels = [source_formatter(position, index) for index, position in enumerate(positions)]
+            else:
+                cached = next((ax._data_visuals_raw_ticks for ax in axes
+                               if getattr(ax, "_data_visuals_raw_ticks", (None, []))[1]), None)
+                if cached:
+                    positions, labels = list(cached[0]), list(cached[1])
+                else:
+                    positions = list(axes[0].get_xticks())
+                    source_formatter = axes[0].xaxis.get_major_formatter()
+                    labels = [source_formatter(position, index) for index, position in enumerate(positions)]
+            raw_ticks = positions, labels
         for ax in axes[1:]:
             getattr(ax, f"share{name}")(axes[0])
+        if formatter is not None:
+            getattr(axes[0], f"{name}axis").set_major_formatter(formatter)
         if ticks:
             getattr(axes[0], f"set_{name}ticks")(ticks[0], labels=tick_labels[0] if tick_labels else None)
+        if raw_ticks is not None:
+            positions, labels = raw_ticks
+            axes[0].set_xticks(positions, labels=labels)
+            for ax in axes:
+                if getattr(ax, "_data_visuals_categorical_x", False):
+                    ax._data_visuals_raw_ticks = (list(positions), list(labels))
         getattr(axes[0], f"set_{name}lim")(limits)
 
 
@@ -571,11 +597,14 @@ def _place_local_legend(record, renderer, width, height):
     return legend.place(x, y)
 
 
-def _render(fig, d, cfg, width, height):
+def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
+    fig._data_visuals_reclaiming = False
     renderer = fig.canvas.get_renderer()
     subplots = [sp for sp in d["subplots"] if sp.get("chart")]
     if not subplots:
         raise ValueError("FigureSpec has no charts to render")
+    for sp in subplots:
+        validate_axis_options(sp["chart"], sp.get("options", {}))
     facet_options = d.get("facets", {})
     if (facet_options and (facet_options.get("sharex") or facet_options.get("sharey"))
             and any(sp["chart"] in ("pie", "donut", "radar") for sp in subplots)):
@@ -679,13 +708,14 @@ def _render(fig, d, cfg, width, height):
                   "w": fs["tick"] * 0.7, "h": zone["h"]}
             sp["_colorbar_box"] = _frac_box(cb, width, height)
             sp["_colorbar_font_size"] = fs["tick"]
-        _style_axis(ax, fs, cfg)
+        _style_axis(ax, fs, cfg, chart_type=sp["chart"])
         builder = _BUILDERS.get(sp["chart"])
         if builder is None and not custom:
             raise ValueError(f"Unknown chart type for matplotlib backend: {sp['chart']}")
         existing_axes = set(fig.axes)
         handles = (custom["handles"] if custom else
                    builder(ax, sp, cfg, maps.get(sp["data"].get("group", "__measures__"), {}))) or []
+        apply_axis_options(ax, sp)
         runtime_minimum = getattr(ax, "_data_visuals_minimum_plot", None)
         if runtime_minimum is not None:
             minimum = tuple(max(old, new) for old, new in zip(minimum, runtime_minimum))
@@ -707,7 +737,7 @@ def _render(fig, d, cfg, width, height):
                 ax.set_ylabel("")
             ax.tick_params(labelbottom=not (facet_options.get("sharex") and sp["row"] < d["grid"]["rows"] - 1),
                            labelleft=not (facet_options.get("sharey") and sp["col"] > 0))
-        _style_axis(ax, fs, cfg)
+        _style_axis(ax, fs, cfg, chart_type=sp["chart"])
         if sp["chart"] == "radar":
             # Radar rings encode the values even in themes that suppress
             # Cartesian grids. Keep angular metric names at publication size.
@@ -776,11 +806,28 @@ def _render(fig, d, cfg, width, height):
                                         for item in [ax] + secondary}}
     if facet:
         _share_facet_axes(records, facet_options)
-    # Monotone measured gutters handle locator changes while keeping grid edges aligned.
-    for iteration in range(8):
+    # Only comparable chart families share horizontal decoration widths. A
+    # matrix colorbar or polar label must not narrow an unrelated scatter plot.
+    alignment_groups = None
+    if cfg.physical and not facet:
+        alignment_groups = {}
+        for key, record in records.items():
+            kind = record["subplot"]["chart"]
+            family = ("cartesian" if kind in ("bar", "line", "scatter", "box", "histogram")
+                      else "matrix" if kind in ("heatmap", "confusion")
+                      else ("custom", key) if kind == "custom" else kind)
+            alignment_groups[key] = family
+    # First converge with monotone gutters. Then attempt one bounded reclamation
+    # using final measured text; fall back if locator/wrapping changes expand it.
+    saved_requirements = None
+    recovery_active = False
+    recovery_passes = 0
+    reclaimed = False
+    for iteration in range(12):
         gutters = align_gutters(
             subplots, requirements,
             vertical_tolerance=min(sp["font_sizes"]["tick"] for sp in subplots) * cfg.vertical_alignment_tolerance,
+            alignment_groups=alignment_groups,
         )
         if facet:
             facet.place(records, requirements)
@@ -847,6 +894,8 @@ def _render(fig, d, cfg, width, height):
                         "right": max(0, bbox.x1 - zone["x"] - zone["w"]) + pad,
                         "top": max(0, bbox.y1 - (height - zone["y"])) + pad,
                         "bottom": max(0, height - zone["y"] - zone["h"] - bbox.y0) + pad}
+            record["measured_gutters"] = measured
+            record["gutters"] = gutters[key]
             for side, value in measured.items():
                 if value > requirements[key][side] + 0.2:
                     requirements[key][side], changed = value, True
@@ -856,8 +905,28 @@ def _render(fig, d, cfg, width, height):
             full_boxes.extend(artist.get_window_extent(renderer) for artist in record["local_artists"])
             record["decoration_bbox"] = tuple(Bbox.union([bb for bb in full_boxes if bb is not None]).bounds)
         if not changed:
+            if (allow_reclaim and cfg.physical and not facet
+                    and saved_requirements is None and iteration <= 8):
+                compact = {key: {side: min(value, record["measured_gutters"][side] + 0.3)
+                                 for side, value in requirements[key].items()}
+                           for key, record in records.items()}
+                if any(requirements[key][side] - compact[key][side] > 0.75
+                       for key in compact for side in compact[key]):
+                    saved_requirements = deepcopy(requirements)
+                    requirements = compact
+                    recovery_active = True
+                    fig._data_visuals_reclaiming = True
+                    continue
+            reclaimed = recovery_active
             break
+        if recovery_active:
+            recovery_passes += 1
+            if recovery_passes >= 2:
+                requirements = saved_requirements
+                recovery_active = False
+                fig._data_visuals_reclaiming = False
     else:
+        fig._data_visuals_reclaiming = saved_requirements is not None
         raise LayoutError(
             "Axis labels did not fit after measurement; increase canvas width or height.",
             axis="height", required_width=width, required_height=height * 1.1,
@@ -879,7 +948,8 @@ def _render(fig, d, cfg, width, height):
     diagnostics = {"canvas": (width, height), "header_height": header, "footer_height": footer,
                    "left_legend_width": left_reserve, "right_legend_width": right_reserve,
                    "shared_legends": shared_artists, "iterations": iteration + 1,
-                   "color_maps": maps, "cells": {}, "header_artists": header_artists}
+                   "color_maps": maps, "cells": {}, "header_artists": header_artists,
+                   "gutter_reclaimed": reclaimed}
     for key, record in records.items():
         x, y, w, h = record["decoration_bbox"]
         box = record["box"]
@@ -896,6 +966,10 @@ def _render(fig, d, cfg, width, height):
             )
             raise _canvas_error(error, box, key, width, height, padding, hint_header, hint_side)
         diagnostics["cells"][key] = {"cell": record["box"], "data_zone": record["zone"],
+                                    "minimum": record["minimum"],
+                                    "gutters": dict(record["gutters"]),
+                                    "measured_gutters": dict(record["measured_gutters"]),
+                                    "alignment_group": alignment_groups.get(key) if alignment_groups else None,
                                     "decoration_bbox": record["decoration_bbox"], "axes": record["axes"],
                                     "secondary_axes": record["secondary_axes"],
                                     "colorbar_axes": record["colorbar_axes"], "legends": record["local_artists"],
@@ -913,4 +987,5 @@ def _render(fig, d, cfg, width, height):
                 required_height=height + 2 * overflow_h,
             )
     fig._data_visuals_layout = diagnostics
+    fig._data_visuals_reclaiming = False
     return fig

@@ -15,10 +15,24 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Dict, Any, List, Optional
 
+import matplotlib
+from cycler import cycler
 from matplotlib.colors import LinearSegmentedColormap
 
 from data_visuals.themes import load_theme, get_color_palette
 from data_visuals.utils.colors import get_color_preset, SEQUENTIAL_SCHEMES
+
+
+# Only visual defaults belong to the renderer. In particular, do not reset a
+# caller's backend, interactive behaviour, figure DPI/size, or output paths.
+# Starting from Matplotlib's defaults (rather than the current rcParams) keeps
+# notebook/seaborn styles from silently changing the same figure declaration.
+_VISUAL_RC_PREFIXES = (
+    "axes.", "axes3d.", "boxplot.", "contour.", "errorbar.", "font.",
+    "grid.", "hatch.", "hist.", "image.", "legend.", "lines.", "mathtext.",
+    "patch.", "path.", "scatter.", "text.", "xtick.", "ytick.",
+)
+_VISUAL_RC_KEYS = ("polaraxes.grid", "pcolor.shading", "pcolormesh.snap")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -197,17 +211,70 @@ class MplConfig:
         return (r / 255, g / 255, b / 255, self.grid_opacity)
 
     def rcparams(self) -> Dict[str, Any]:
-        """Return a dict suitable for plt.rcParams.update()."""
-        return {
+        """Resolve a complete visual style for a temporary ``rc_context``.
+
+        Defaults are independent of the ambient Matplotlib style; theme values
+        then take precedence. The rendering/export contexts restore all caller
+        settings on exit, including when a callback or layout check fails.
+        """
+        values = {
+            key: deepcopy(value) for key, value in matplotlib.rcParamsDefault.items()
+            if key.startswith(_VISUAL_RC_PREFIXES) or key in _VISUAL_RC_KEYS
+        }
+        family = self.font_family.casefold()
+        sans = "sans" in family or family in ("arial", "helvetica", "verdana")
+        values.update({
             "font.family": [self.font_family],
+            "font.size": self.font_sizes["axis_label"] if self.physical else 10.0,
+            "mathtext.fontset": "dejavusans" if sans else "stix",
+            "text.usetex": False,
             "pdf.fonttype": 42,
+            "pdf.use14corefonts": False,
             "ps.fonttype": 42,
+            "ps.useafm": False,
             "svg.fonttype": "none",
             "svg.hashsalt": "data_visuals",
             "text.color": self.text_color,
+            "figure.facecolor": self.background,
+            "figure.edgecolor": self.background,
+            "figure.frameon": True,
+            "figure.autolayout": False,
+            "figure.constrained_layout.use": False,
+            "savefig.transparent": False,
+            "savefig.edgecolor": "auto",
+            "savefig.facecolor": "auto",
+            "axes.facecolor": self.background,
             "axes.edgecolor": self.axis_domain_color,
             "axes.linewidth": self.axis_domain_width,
             "axes.labelcolor": self.text_color,
+            "axes.labelweight": self.axis_label_weight,
+            "axes.labelpad": self.axis_title_padding,
+            "axes.titleweight": self.cell_title_weight,
+            "axes.titlecolor": self.text_color,
+            "axes.prop_cycle": cycler(color=self.categorical_palette),
+            "axes.axisbelow": True,
+            # Grids are selected by chart semantics in style_axis: matrices
+            # need cell boundaries, while radar keeps its polar value rings.
+            "axes.grid": False,
+            "axes.autolimit_mode": "data",
+            "axes.xmargin": 0.05,
+            "axes.ymargin": 0.05,
+            "axes.zmargin": 0.05,
+            "lines.linewidth": self.line_stroke_width,
+            "lines.markersize": self.marker_size ** 0.5,
+            "lines.markeredgewidth": max(0.5, self.axis_domain_width),
+            "patch.edgecolor": self.axis_domain_color,
+            "patch.linewidth": self.axis_domain_width,
+            "grid.color": self.axis_grid_color,
+            "grid.alpha": self.grid_opacity,
+            "grid.linewidth": 0.5,
             "xtick.color": self.text_color,
             "ytick.color": self.text_color,
-        }
+            "xtick.major.size": self.axis_tick_size,
+            "ytick.major.size": self.axis_tick_size,
+            "xtick.major.width": self.axis_tick_width,
+            "ytick.major.width": self.axis_tick_width,
+            "xtick.major.pad": self.axis_label_padding,
+            "ytick.major.pad": self.axis_label_padding,
+        })
+        return values

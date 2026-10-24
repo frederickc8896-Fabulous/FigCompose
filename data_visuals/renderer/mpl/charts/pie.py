@@ -49,6 +49,13 @@ def _draw_pie(ax, sp, cfg, color_map):
         textprops={"fontsize": max(8.0, sp["font_sizes"]["tick"]),
                    "fontfamily": cfg.font_family, "color": cfg.text_color},
     )
+    # There are no outer category labels: the managed legend carries them.
+    # Matplotlib's default +/-1.25 viewport unnecessarily leaves 20% of the
+    # square unused. A small fixed inset protects the wedge outline without
+    # coupling the data limits to intermediate physical layout candidates.
+    extent = 1.04
+    ax.set_xlim(-extent, extent)
+    ax.set_ylim(-extent, extent)
     ax.set_aspect("equal", adjustable="box")
     ax.set_axis_off()
     if len(result) == 3:
@@ -65,10 +72,18 @@ def _draw_pie(ax, sp, cfg, color_map):
         renderer = ax.figure.canvas.get_renderer()
         labels = [text for text in result[2] if text.get_text()]
         measured = [(text, text.get_window_extent(renderer)) for text in labels]
+        limits = np.asarray((ax.get_xlim(), ax.get_ylim()), dtype=float)
+        span = limits[:, 1] - limits[:, 0]
         diameter = 60.0
         for i, (first, first_box) in enumerate(measured):
+            # Each label must also fit inside the viewport, including the
+            # outermost text on thin rings and labels with more decimals.
+            position = (np.asarray(first.get_position()) - limits[:, 0]) / span
+            clearance = np.minimum(position, 1.0 - position)
+            half_size = np.asarray((first_box.width, first_box.height)) * 36 / ax.figure.dpi
+            diameter = max(diameter, float(np.max((half_size + 1.5) / clearance)))
             for second, second_box in measured[i + 1:]:
-                dx, dy = np.abs(np.asarray(first.get_position()) - np.asarray(second.get_position())) / 2.5
+                dx, dy = np.abs(np.asarray(first.get_position()) - np.asarray(second.get_position())) / span
                 width = (first_box.width + second_box.width) * 36 / ax.figure.dpi + 1.5
                 height = (first_box.height + second_box.height) * 36 / ax.figure.dpi + 1.5
                 required = min(width / dx if dx > 1e-12 else np.inf,

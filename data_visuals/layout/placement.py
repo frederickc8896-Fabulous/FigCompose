@@ -52,12 +52,14 @@ def cell_boxes(spec, header, padding, footer=0, left_reserve=0, right_reserve=0)
     } for sp in cells}
 
 
-def align_gutters(subplots, requirements, *, vertical_tolerance=None):
+def align_gutters(subplots, requirements, *, vertical_tolerance=None, alignment_groups=None):
     """Align columns; share vertical gutters only for similar decorations.
 
     A long x label or a local legend must not shrink every neighbouring panel.
     None preserves strict alignment; a numeric tolerance clusters similar
     vertical requirements while retaining full horizontal edge alignment.
+    Optional groups prevent an unrelated chart family from inheriting another
+    family's decoration widths. Facet placement retains its own strict rules.
     """
     edges = {}
     result = {key: dict(value) for key, value in requirements.items()}
@@ -68,8 +70,9 @@ def align_gutters(subplots, requirements, *, vertical_tolerance=None):
             continue
         topology = (c, c + sp.get("col_span", 1), r, r + sp.get("row_span", 1))
         for side, edge in zip(sides, topology):
-            edges.setdefault((side, edge), []).append((key, requirements[key][side]))
-    for (side, _), values in edges.items():
+            group = alignment_groups.get(key) if alignment_groups is not None and side in ("left", "right") else None
+            edges.setdefault((side, edge, group), []).append((key, requirements[key][side]))
+    for (side, _, _), values in edges.items():
         if side in ("left", "right") or vertical_tolerance is None:
             maximum = max(value for _, value in values)
             for key, _ in values:

@@ -418,7 +418,9 @@ class Figure:
         get_chart(chart_type)  # 不存在会抛 ValueError
 
         if chart_opts is not None:
-            chart_opts = deepcopy(chart_opts)
+            if not isinstance(chart_opts, Mapping):
+                raise ValueError("chart_opts must be a mapping")
+            chart_opts = deepcopy(dict(chart_opts))
             if "legend" in chart_opts:
                 chart_opts["legend"] = normalize_legend(chart_opts["legend"])
 
@@ -508,6 +510,14 @@ class Figure:
             if errors:
                 raise ValueError(f"子图 [{row},{col}] ({ct}) 校验失败:\n" +
                                  "\n".join(f"  - {e}" for e in errors))
+            # Axis options have one contract across statistical chart types.
+            # Include typed options (notably horizontal) before checking which
+            # displayed axis is categorical. Leave radar's native ylim to its
+            # own ChartSpec validation.
+            from data_visuals.renderer.mpl.axes import validate_axis_options
+            axis_options = dict(chart.to_spec().get("options", {}))
+            axis_options.update(decl.get("chart_opts") or {})
+            validate_axis_options(ct, axis_options)
             chart_specs[(row, col)] = chart
             compute_reqs[(row, col)] = chart.compute_requirements()
             # Existing error columns contain precomputed uncertainty. Preserve

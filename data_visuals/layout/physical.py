@@ -155,17 +155,61 @@ def _commit_measured_geometry(spec, measured):
 
 
 def _score(spec, measured):
-    aspects, narrow = [], []
+    aspects, undersized, round_fit = [], [], []
     for panel in spec.subplots:
         record = measured["cells"].get((panel.row, panel.col))
         if record is None:
             continue
-        zone = record["data_zone"]
-        aspects.append(abs(math.log(zone["w"] / zone["h"] / _preferred_aspect(panel))))
-        narrow.append(max(0, 115 / zone["w"] - 1) ** 2)
+        cell, zone = record["cell"], record["data_zone"]
+        aspect = _preferred_aspect(panel)
+        aspects.append(abs(math.log(zone["w"] / zone["h"] / aspect)))
+        # These are soft reading preferences, separate from the renderer's
+        # hard minimum sizes. Height matters too: a wide, very shallow curve
+        # and a tiny square radar must not win merely by matching an aspect.
+        target_w = 115.0
+        target_h = target_w / aspect
+        undersized.append(max(0, target_w / zone["w"] - 1) ** 2
+                          + max(0, target_h / zone["h"] - 1) ** 2)
+        if panel.chart_type in {"pie", "donut", "radar"}:
+            # Compare the actual square viewport with the cell's short side,
+            # not its area: circular content cannot fill a wide final-row span.
+            fit = min(zone["w"], zone["h"]) / min(cell["w"], cell["h"])
+            round_fit.append(max(0, 1 - fit) ** 2)
     count = max(1, len(aspects))
-    return (0.65 * sum(aspects) / count + 0.8 * sum(narrow) / count
+    return (0.65 * sum(aspects) / count + 0.8 * sum(undersized) / count
+            + 0.25 * sum(round_fit) / count
             + (0.45 * spec.canvas["height"] / spec.canvas["width"] if spec.canvas["height_auto"] else 0))
+
+
+def _compact_height(spec, measured, cfg):
+    """Shrink data regions, preserving the measured fixed decoration bands.
+
+    Scaling the entire canvas by .85 also scales the space available below a
+    long shared legend, often making a useful compact probe fail immediately.
+    Estimate a modest reduction from actual data heights instead. A renderer
+    pass still validates changed ticks, wrapped labels and native aspects.
+    """
+    height = spec.canvas["height"]
+    available = height - measured["header_height"] - measured.get("footer_height", 0) - 2 * cfg.canvas_padding
+    reductions = []
+    for panel in spec.subplots:
+        record = measured["cells"].get((panel.row, panel.col))
+        if record is None:
+            continue
+        cell, zone = record["cell"], record["data_zone"]
+        minimum = record.get("minimum")
+        if minimum is None:
+            if panel.custom_panel is not None:
+                minimum = panel.custom_panel.min_size
+            elif panel.chart_type in {"pie", "donut", "radar"}:
+                minimum = max(60.0, cfg.min_plot_width), max(60.0, cfg.min_plot_height)
+            else:
+                minimum = cfg.min_plot_width, cfg.min_plot_height
+        min_h = minimum[1] if isinstance(minimum, tuple) else minimum
+        desired = max(min_h + 1.0, zone["h"] * 0.82)
+        fraction = cell["h"] / max(1.0, available)
+        reductions.append(max(0, zone["h"] - desired) / max(0.01, fraction))
+    return height - min(reductions, default=0.0)
 
 
 def _comfortable_height(spec, measured, cfg, columns):
@@ -225,6 +269,9 @@ def resolve_canvas_spec(spec, canvas_request, *, auto_cols=False):
         passes = 1 if canvas_request["height"] is not None else _MAX_HEIGHT_PASSES
         fitted = False
         probes = []
+        compact_bracket = None
+        refinement_used = False
+        best_height = None
         for attempt in range(passes):
             candidate = _candidate(spec, canvas_request, height, cfg, columns)
             rendered = None
@@ -238,12 +285,22 @@ def resolve_canvas_spec(spec, canvas_request, *, auto_cols=False):
                     # Compare a compact and a more spacious measured candidate
                     # instead of silently treating that preference as a bound.
                     comfortable = _comfortable_height(candidate, measured, cfg, columns)
-                    probes = [height * 0.85]
+                    compact = _compact_height(candidate, measured, cfg)
+                    probes = [compact] if compact < height - 2 else []
                     if comfortable > height + 2:
                         probes.append(comfortable + 1)
+                if best_height is None or height < best_height:
+                    best_height = height
                 _commit_measured_geometry(candidate, measured)
                 successes.append((score, candidate))
                 fitted = True
+                # One bisection only: recover a safe height between a failed
+                # compact trial and a known fit, without unbounded searching.
+                if not probes and compact_bracket and not refinement_used:
+                    low, high = compact_bracket
+                    if high - low > 3:
+                        probes.append((low + high) / 2)
+                    refinement_used = True
                 if probes and attempt < passes - 1:
                     height = probes.pop(0)
                     continue
@@ -253,9 +310,17 @@ def resolve_canvas_spec(spec, canvas_request, *, auto_cols=False):
                 if error.axis == "width" or canvas_request["height"] is not None:
                     break
                 if fitted:
+                    if best_height is not None and height < best_height:
+                        compact_bracket = height, best_height
                     if probes:
                         height = probes.pop(0)
                         continue
+                    if compact_bracket and not refinement_used:
+                        low, high = compact_bracket
+                        refinement_used = True
+                        if high - low > 3:
+                            height = (low + high) / 2
+                            continue
                     break
                 needed = error.required_height or 0
                 height = max(height * 1.18, needed + 3)

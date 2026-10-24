@@ -174,33 +174,6 @@ def _decorations(ax, opts, cfg):
             props[key] = _number(arrow.get(key, default), f"arrows.{key}", minimum=0)
         arrows.append(ax.annotate("", xy=end, xytext=start, arrowprops=props, zorder=2))
         segments.append((start, end))
-    for axis in ("x", "y"):
-        labels_key = f"{axis}ticklabels"
-        if labels_key in opts:
-            if f"{axis}ticks" not in opts:
-                raise ValueError(f"{labels_key} requires {axis}ticks")
-            if not isinstance(opts[labels_key], list) or not all(isinstance(label, str) for label in opts[labels_key]):
-                raise ValueError(f"{labels_key} must be a list of strings")
-        if f"{axis}ticks" in opts:
-            ticks = opts[f"{axis}ticks"]
-            if isinstance(ticks, (str, bytes)):
-                raise ValueError(f"{axis}ticks must be a sequence of finite numbers")
-            try:
-                ticks = [_number(value, f"{axis}ticks") for value in ticks]
-            except TypeError as exc:
-                raise ValueError(f"{axis}ticks must be a sequence of finite numbers") from exc
-            tick_options = {}
-            if labels_key in opts:
-                if len(opts[labels_key]) != len(ticks):
-                    raise ValueError(f"{labels_key} must have the same length as {axis}ticks")
-                tick_options["labels"] = opts[labels_key]
-            (ax.set_xticks if axis == "x" else ax.set_yticks)(ticks, **tick_options)
-        # Limits follow ticks because Matplotlib expands limits to include ticks.
-        if f"{axis}lim" in opts:
-            low, high = _coordinates(opts[f"{axis}lim"], f"{axis}lim")
-            if low >= high:
-                raise ValueError(f"{axis}lim requires lower < upper")
-            (ax.set_xlim if axis == "x" else ax.set_ylim)(low, high)
     return arrows, segments
 
 
@@ -286,7 +259,7 @@ def _draw_scatter(ax, sp, cfg, color_map):
         if key is not None:
             handles.append(artist)
     if displaced_data:
-        # Explicit chart limits are applied later by _decorations. This also
+        # Explicit chart limits are applied later by the common axis layer. This also
         # honours any axes whose automatic scaling was already disabled.
         ax.autoscale_view()
     ax._data_visuals_errorbars = errorbars
