@@ -1,5 +1,9 @@
 # FigCompose
 
+<p>
+  <img src="assets/branding/figcompose-logo-v1.png" alt="FigCompose Logo" width="460">
+</p>
+
 [English](README.md) | **简体中文**
 
 Compose publication figures with Matplotlib.
