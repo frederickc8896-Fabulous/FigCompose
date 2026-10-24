@@ -59,7 +59,7 @@ def _draw_bar(ax, sp, cfg, color_map):
                       error_kw={"ecolor": cfg.error_bar_color, "elinewidth": cfg.error_bar_width,
                                 "capsize": cfg.axis_tick_size}, **kwargs)
         if key is not None:
-            bars._paperfig_legend_key = key
+            bars._figcompose_legend_key = key
             handles.append(bars)
         if opts.get("show_value"):
             from data_visuals.core.identity import numeric_format_function

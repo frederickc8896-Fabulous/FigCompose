@@ -52,7 +52,7 @@ def _legend_handles(result, sp, context):
     handles = []
     for original in result.legend_handles:
         label = original.get_label()
-        key = getattr(original, "_paperfig_legend_key", label)
+        key = getattr(original, "_figcompose_legend_key", label)
         if key not in context.color_map:
             matches = [value for value in context.color_map if str(value) == str(key)]
             if len(matches) == 1:
@@ -62,7 +62,7 @@ def _legend_handles(result, sp, context):
         # before changing their label/key so semantic aliases cannot alter the
         # diagram, and repeated trials remain independent.
         handle = copy(original)
-        handle._paperfig_legend_key = canonical
+        handle._figcompose_legend_key = canonical
         if canonical != key and label == str(key):
             handle.set_label(str(canonical))
         handles.append(handle)
@@ -252,5 +252,5 @@ def place_custom_title(record, renderer, cfg, height):
     x = title.get_position()[0]
     ax.set_title(title.get_text(), fontproperties=title.get_fontproperties().copy(),
                  color=title.get_color(), y=1.0, va="bottom", pad=overflow + gap)
-    title.set_y(1.0)  # Axes3D.set_title applies a native .92 factor; PaperFig owns this header.
+    title.set_y(1.0)  # Axes3D.set_title applies a native .92 factor; FigCompose owns this header.
     title.set_x(x)

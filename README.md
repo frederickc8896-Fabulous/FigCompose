@@ -14,8 +14,8 @@ for the whole figure, reducing repeated style and spacing adjustments when combi
 - **Measure and compare**: locate overflowing text, tick collisions and font-size issues, then save layout snapshots to check later changes.
 - **Extend with native Matplotlib**: 10 built-in chart types can share a figure with custom diagrams, polar plots and 3D plots.
 
-This project is in Alpha; interfaces are still evolving. The project is named **FigCompose**;
-the Python package and import path are currently `data_visuals`.
+This project is in Alpha; interfaces are still evolving. The project and distribution are named **FigCompose**;
+the Python import path remains `data_visuals` for compatibility.
 
 [Quick start](#quick-start) · [Paper configuration](#one-configuration-for-an-entire-paper) · [Chart types](#chart-types-and-aggregation) · [Figure checks](#figure-checks-and-layout-snapshots) · [Custom panels](#custom-matplotlib-panels) · [Color catalog](#color-catalog)
 
@@ -284,6 +284,10 @@ The repository includes library source, themes, installation metadata, Chinese a
 Local demos, outputs, tests, detailed documentation and experimental data are ignored.
 The examples above include their own data and run after cloning and installing.
 Regenerate the README images with `python assets/readme/generate.py`.
+
+## License
+
+FigCompose is licensed under the [Apache License 2.0](LICENSE).
 
 ## Color catalog
 

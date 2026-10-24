@@ -103,7 +103,7 @@ def _legend_entries(handles, options, subplot=None):
                 key = row[group]
                 style = styles.get(key, styles.get(str(key), {}))
                 aliases[style.get("label", str(key))] = key
-    entries = [(getattr(handle, "_paperfig_legend_key", aliases.get(handle.get_label(), handle.get_label())),
+    entries = [(getattr(handle, "_figcompose_legend_key", aliases.get(handle.get_label(), handle.get_label())),
                 handle, handle.get_label()) for handle in handles]
     order = options.get("order") or (subplot.get("options", {}).get("series_order") if subplot else []) or []
     ranks = {value: i for i, value in enumerate(order)}
@@ -168,13 +168,13 @@ def _shared_legend_blocks(fig, spec, cfg, group_cells, shared, maps, width, padd
             handles = [Patch(facecolor=color_map[v], edgecolor=cfg.bar_stroke,
                              linewidth=.5, label=str(v)) for v in visible]
             for handle, value in zip(handles, visible):
-                handle._paperfig_legend_key = value
-        seen = {getattr(handle, "_paperfig_legend_key", handle.get_label()) for handle in handles}
+                handle._figcompose_legend_key = value
+        seen = {getattr(handle, "_figcompose_legend_key", handle.get_label()) for handle in handles}
         for sp in cells:
             record = (custom_records or {}).get((sp["row"], sp["col"]))
             for handle in record["handles"] if record else ():
                 label = handle.get_label()
-                key = getattr(handle, "_paperfig_legend_key", label)
+                key = getattr(handle, "_figcompose_legend_key", label)
                 if label and not label.startswith("_") and key not in seen:
                     handles.append(handle)
                     seen.add(key)
@@ -589,7 +589,7 @@ def _shared_styled_legend(cells, visible, color_map, cfg):
         if markers and (not lines or lines[0].get_marker() in (None, "None", "", " ")):
             glyphs.append(markers[0])
         handle = glyphs[0] if len(glyphs) == 1 else _CompositeLegendGlyph(glyphs)
-        handle._paperfig_legend_key = value
+        handle._figcompose_legend_key = value
         handles.append(handle)
     return handles
 
@@ -617,7 +617,7 @@ def _shared_scatter_legend(cells, visible, color_map, cfg):
             styles = opts.get("series_styles", {})
             style = styles.get(value, styles.get(str(value), {}))
             handle = scatter_legend_handle(value, color_map[value], style, cfg)
-            handle._paperfig_legend_key = value
+            handle._figcompose_legend_key = value
             handle.set_alpha(opts.get("opacity", 0.7))
             signatures.append((repr(handle.get_marker()), handle.get_markersize(),
                                to_rgba(handle.get_markerfacecolor()), to_rgba(handle.get_markeredgecolor()),

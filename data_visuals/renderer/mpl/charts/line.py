@@ -58,7 +58,7 @@ def _draw_line(ax, sp, cfg, color_map):
                 # curves. A smoothed curve needs a legend proxy because its
                 # markers are drawn separately at the original observations.
                 handle = line if px is x else glyph
-                handle._paperfig_legend_key = series_key
+                handle._figcompose_legend_key = series_key
                 handles.append(handle)
     if not numeric:
         ax.set_xticks(range(len(categories)), labels=categories)
@@ -85,9 +85,9 @@ def _draw_line(ax, sp, cfg, color_map):
             metric_handle = Line2D([], [], color=cfg.text_color, linestyle=cfg.y2_dash,
                                    marker="D", linewidth=cfg.line_stroke_width,
                                    markersize=np.sqrt(cfg.marker_size), label=y2_label)
-            metric_handle._paperfig_legend_key = mapping["y2"]
+            metric_handle._figcompose_legend_key = mapping["y2"]
             handles.append(metric_handle)
         elif y2_handle is not None:
-            y2_handle._paperfig_legend_key = mapping["y2"]
+            y2_handle._figcompose_legend_key = mapping["y2"]
             handles.append(y2_handle)
     return handles

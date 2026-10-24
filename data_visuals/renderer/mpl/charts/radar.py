@@ -44,7 +44,7 @@ def _draw_radar(ax, sp, cfg, color_map):
         if alpha:
             ax.fill(closed_angles, closed, color=color, alpha=alpha, linewidth=0)
         if key is not None:
-            line._paperfig_legend_key = key
+            line._figcompose_legend_key = key
             handles.append(line)
         maximum = max(maximum, float(values.max()))
     ax.set_xticks(angles, labels=[textwrap.fill(str(category), width=int(opts.get("label_width", 18)),
