@@ -53,13 +53,15 @@ fig = plot(
     data,  # 或 "results.csv"
     x="dataset", group="model",
     plots=[
-        {"kind": "bar", "metric": "accuracy", "title": "(a) Accuracy"},
-        {"kind": "line", "metric": "latency", "title": "(b) Latency"},
+        {"kind": "bar", "metric": "accuracy", "title": "(a) Accuracy",
+         "chart_opts": {"ylabel": "Accuracy (%)", "yformat": ".0%"}},
+        {"kind": "line", "metric": "latency", "title": "(b) Latency",
+         "chart_opts": {"ylabel": "Latency (ms)", "yformat": ".0f"}},
     ],
     canvas={"width": 180},
     style="modern", palette="curated-5-warm",
     title="Model comparison",
-    legend={"scope": "shared", "position": "bottom", "ncols": 2},
+    legend={"scope": "shared", "ncols": 2},
 )
 fig.render("figure.pdf")
 fig.render("figure.png", dpi=300)
@@ -92,7 +94,29 @@ fig.render("figure.png", dpi=300)
 
 全图 `legend` 可设置共享或局部图例、位置、列数、字号、边框、顺序和显示名；
 子图通过 `chart_opts={"legend": {...}}` 覆盖，`legend=False` 隐藏图例。
+共享图例默认居中放在主标题下方、子图上方；显式设置 `position="bottom"` 等可调整位置。
 默认物理字号：主标题 11、子标题 9、轴标签 8、刻度 7、图例 8 pt，单图与多图保持一致。
+
+## 坐标轴与紧凑排版
+
+柱状、折线、散点、箱线和直方图共用 `chart_opts` 中的轴配置，显示名称可以独立于 CSV 列名：
+
+| 选项 | 示例与含义 |
+|---|---|
+| `xlabel` / `ylabel` | `"Accuracy (%)"`；空字符串隐藏轴标题 |
+| `xlim` / `ylim` | `[0, 100]`；固定范围，可使用倒序范围 |
+| `xticks` / `yticks` | `[0, 25, 50, 75, 100]`；固定刻度 |
+| `xticklabels` / `yticklabels` | 与对应刻度等长的显示文字 |
+| `xformat` / `yformat` | `".2f"` 保留两位小数；`".0%"` 将 0–1 显示为百分比；`"{x:.0f}%"` 为 0–100 数值添加百分号 |
+| `xscale` / `yscale` | `"linear"`、`"log"`、`"symlog"`；分类轴保留线性尺度 |
+
+热力图和混淆矩阵支持轴标题及刻度显示覆盖，保持分类矩阵范围；雷达图沿用径向 `ylim`。
+不适用或冲突的轴配置明确报错。水平柱图、水平箱线图的轴配置指屏幕上的 X/Y 轴。
+
+物理画布下，同类图保持绘图区对齐，混排时矩阵色条和圆形图外标签使用各自的留白；
+`FigureConfig.facets` 仍为比较图保留严格等大绘图区。
+布局实测后尝试回收多余留白，回收失败时恢复保守布局；自动高度综合考虑真实绘图区宽高。
+样式渲染隔离外部 Matplotlib 视觉设置，原生回调仍可显式调整自己的图元。
 
 ## 自定义 Matplotlib 面板
 

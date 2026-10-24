@@ -82,41 +82,43 @@ def gallery_data() -> pd.DataFrame:
                 "view": "classification", "truth": truth, "prediction": prediction,
                 "count": counts[row][col],
             })
-    return pd.DataFrame.from_records(records).rename(columns={
-        "method": "Method", "dataset": "Dataset", "score": "Score (%)",
-        "epoch": "Epoch", "loss": "Loss", "latency": "Latency (ms)",
-        "split": "Evaluation split", "error": "Error (%)", "response": "Response",
-        "criterion": "Criterion", "truth": "True class", "prediction": "Predicted class",
-    })
+    return pd.DataFrame.from_records(records)
 
 
 def build_gallery():
     """One declaration per panel; Figure owns axes allocation and decoration."""
     return plot(
-        gallery_data(), group="Method", cols=3,
+        gallery_data(), group="method", cols=3,
         canvas={"width": 225}, style="modern", palette="curated-2-default",
         title="FigCompose | Common scientific charts",
-        legend={"scope": "shared", "position": "bottom", "ncols": 2,
+        legend={"scope": "shared", "ncols": 2,
                 "order": list(METHODS)},
         plots=[
-            {"kind": "bar", "x": "Dataset", "metric": "Score (%)", "error": "std",
-             "where": {"view": "benchmark"}, "title": "(a) Grouped bars + SD"},
-            {"kind": "line", "x": "Epoch", "metric": "Loss", "markers": False,
-             "where": {"view": "learning"}, "title": "(b) Learning curves"},
-            {"kind": "scatter", "x": "Latency (ms)", "metric": "Score (%)", "opacity": 0.7,
-             "where": {"view": "tradeoff"}, "title": "(c) Scatter plots"},
-            {"kind": "box", "x": "Evaluation split", "metric": "Error (%)",
-             "where": {"view": "distribution"}, "title": "(d) Box plots"},
-            {"kind": "histogram", "metric": "Response", "bins": 16,
-             "where": {"view": "distribution"}, "title": "(e) Histograms"},
-            {"kind": "heatmap", "x": "Dataset", "y": "Method", "metric": "Score (%)",
-             "where": {"view": "benchmark"}, "title": "(f) Heatmaps", "fmt": ".1f"},
-            {"kind": "confusion", "x": "Predicted class", "y": "True class", "metric": "count",
+            {"kind": "bar", "x": "dataset", "metric": "score", "error": "std",
+             "where": {"view": "benchmark"}, "title": "(a) Grouped bars + SD",
+             "chart_opts": {"xlabel": "Dataset", "ylabel": "Score (%)"}},
+            {"kind": "line", "x": "epoch", "metric": "loss", "markers": False,
+             "where": {"view": "learning"}, "title": "(b) Learning curves",
+             "chart_opts": {"xlabel": "Epoch", "ylabel": "Loss"}},
+            {"kind": "scatter", "x": "latency", "metric": "score", "opacity": 0.7,
+             "where": {"view": "tradeoff"}, "title": "(c) Scatter plots",
+             "chart_opts": {"xlabel": "Latency (ms)", "ylabel": "Score (%)"}},
+            {"kind": "box", "x": "split", "metric": "error",
+             "where": {"view": "distribution"}, "title": "(d) Box plots",
+             "chart_opts": {"xlabel": "Evaluation split", "ylabel": "Error (%)"}},
+            {"kind": "histogram", "metric": "response", "bins": 16,
+             "where": {"view": "distribution"}, "title": "(e) Histograms",
+             "chart_opts": {"xlabel": "Response", "ylabel": "Count"}},
+            {"kind": "heatmap", "x": "dataset", "y": "method", "metric": "score",
+             "where": {"view": "benchmark"}, "title": "(f) Heatmaps", "fmt": ".1f",
+             "chart_opts": {"xlabel": "Dataset", "ylabel": "Method"}},
+            {"kind": "confusion", "x": "prediction", "y": "truth", "metric": "count",
              "where": {"view": "classification"}, "title": "(g) Confusion matrices",
-             "normalize": True, "fmt": ".2f"},
+             "normalize": True, "fmt": ".2f",
+             "chart_opts": {"xlabel": "Predicted class", "ylabel": "True class"}},
             {"kind": "donut", "metric": "count", "width": 0.38,
              "where": {"view": "composition"}, "title": "(h) Composition / donut"},
-            {"kind": "radar", "x": "Criterion", "metric": "Score (%)", "ylim": (0, 100),
+            {"kind": "radar", "x": "criterion", "metric": "score", "ylim": (0, 100),
              "order": ["Accuracy", "Robustness", "Efficiency", "Stability"],
              "where": {"view": "profile"}, "title": "(i) Radar profiles"},
         ],
@@ -184,12 +186,20 @@ def build_sequential_catalog():
     return figure
 
 
+def clean_svg(path):
+    """Keep generated SVG source friendly to Git's whitespace checks."""
+    content = "\n".join(line.rstrip() for line in path.read_text(encoding="utf-8").splitlines()) + "\n"
+    path.write_text(content, encoding="utf-8", newline="\n")
+
+
 def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
     gallery = build_gallery()
     for extension in ("svg", "png"):
         output = OUTPUT / f"traditional_charts.{extension}"
         gallery.render(output, dpi=200)
+        if extension == "svg":
+            clean_svg(output)
         print(output.relative_to(ROOT))
     with plt.rc_context({"font.family": "Times New Roman", "svg.fonttype": "path",
                          "svg.hashsalt": "figcompose-readme", "savefig.bbox": None}):
@@ -200,6 +210,8 @@ def main():
                 for extension in ("svg", "png"):
                     output = OUTPUT / f"{name}.{extension}"
                     figure.savefig(output, dpi=100, facecolor="white", bbox_inches=None)
+                    if extension == "svg":
+                        clean_svg(output)
                     print(output.relative_to(ROOT))
             finally:
                 plt.close(figure)
