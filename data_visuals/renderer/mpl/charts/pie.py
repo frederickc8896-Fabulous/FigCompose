@@ -49,6 +49,10 @@ def _draw_pie(ax, sp, cfg, color_map):
         textprops={"fontsize": max(8.0, sp["font_sizes"]["tick"]),
                    "fontfamily": cfg.font_family, "color": cfg.text_color},
     )
+    # Matplotlib 3.11 returns an unsized PieContainer. It retains the same
+    # unpacking contract as the older two-/three-item tuple return value.
+    _, _, *percentage_groups = result
+    percentage_texts = percentage_groups[0] if percentage_groups else []
     # There are no outer category labels: the managed legend carries them.
     # Matplotlib's default +/-1.25 viewport unnecessarily leaves 20% of the
     # square unused. A small fixed inset protects the wedge outline without
@@ -58,8 +62,8 @@ def _draw_pie(ax, sp, cfg, color_map):
     ax.set_ylim(-extent, extent)
     ax.set_aspect("equal", adjustable="box")
     ax.set_axis_off()
-    if len(result) == 3:
-        for color, text in zip(colors, result[2]):
+    if percentage_texts:
+        for color, text in zip(colors, percentage_texts):
             background = _luminance(color)
             def contrast(foreground):
                 luminance = _luminance(foreground)
@@ -70,7 +74,7 @@ def _draw_pie(ax, sp, cfg, color_map):
         # the canvas can grow automatic height or reject an undersized fixed
         # Figure rather than rendering overlapping text.
         renderer = ax.figure.canvas.get_renderer()
-        labels = [text for text in result[2] if text.get_text()]
+        labels = [text for text in percentage_texts if text.get_text()]
         measured = [(text, text.get_window_extent(renderer)) for text in labels]
         limits = np.asarray((ax.get_xlim(), ax.get_ylim()), dtype=float)
         span = limits[:, 1] - limits[:, 0]
@@ -92,6 +96,6 @@ def _draw_pie(ax, sp, cfg, color_map):
         ax._data_visuals_minimum_plot = (diameter, diameter)
     # Explicitly include percentages in measured export bounds. Legends are
     # separate handles, so zero-size categories retain their stable colours.
-    ax._data_visuals_bounds_artists = list(result[2]) if len(result) == 3 else []
+    ax._data_visuals_bounds_artists = list(percentage_texts)
     return [Patch(facecolor=color, edgecolor="none", label=str(category))
             for category, color in zip(categories, colors)]
