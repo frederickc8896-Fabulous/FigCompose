@@ -6,6 +6,10 @@
 
 [English](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/README.md) | **简体中文**
 
+[![PyPI version](https://img.shields.io/pypi/v/FigCompose.svg)](https://pypi.org/project/FigCompose/)
+[![Python versions](https://img.shields.io/pypi/pyversions/FigCompose.svg)](https://pypi.org/project/FigCompose/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/LICENSE)
+
 Compose publication figures with Matplotlib.
 
 指定 CSV、指标、子图类型和风格，生成排版与配色统一的论文 Figure。
@@ -32,20 +36,35 @@ FigCompose 以整张 Figure 为单位，统一管理物理尺寸、字号、分�
 
 ## 安装
 
-需要 Python 3.10+。
+从 [PyPI](https://pypi.org/project/FigCompose/) 安装已发布版本，需要 Python 3.10+。
 
 ```bash
 python -m pip install FigCompose
 ```
 
 分发包名为 `FigCompose`，导入方式仍为 `from data_visuals import plot`。
-升级使用 `python -m pip install --upgrade FigCompose`。
+升级已有的 PyPI 安装：
+
+```bash
+python -m pip install --upgrade FigCompose
+```
+
+需要固定当前版本以便复现环境时，可使用 `python -m pip install "FigCompose==0.1.1"`。
+
+### 源码开发
 
 从源码开发时，克隆仓库并进行可编辑安装：
 
 ```bash
 git clone https://github.com/frederickc8896-Fabulous/FigCompose.git
 cd FigCompose
+python -m pip install -e .
+```
+
+已通过可编辑方式安装的旧 clone，在仓库根目录执行以下命令更新：
+
+```bash
+git pull --ff-only
 python -m pip install -e .
 ```
 

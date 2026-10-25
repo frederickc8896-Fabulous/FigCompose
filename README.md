@@ -6,6 +6,10 @@
 
 **English** | [简体中文](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/README.zh-CN.md)
 
+[![PyPI version](https://img.shields.io/pypi/v/FigCompose.svg)](https://pypi.org/project/FigCompose/)
+[![Python versions](https://img.shields.io/pypi/pyversions/FigCompose.svg)](https://pypi.org/project/FigCompose/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/LICENSE)
+
 Compose publication figures with Matplotlib.
 
 Choose a CSV, metrics, chart types and a style to produce a figure with consistent layout and colors.
@@ -33,20 +37,35 @@ The data are synthetic, generated with a fixed random seed. Pie charts and the v
 
 ## Installation
 
-Requires Python 3.10+.
+Install the published package from [PyPI](https://pypi.org/project/FigCompose/). Requires Python 3.10+.
 
 ```bash
 python -m pip install FigCompose
 ```
 
 The distribution name is `FigCompose`; import it with `from data_visuals import plot`.
-Upgrade with `python -m pip install --upgrade FigCompose`.
+Upgrade an existing PyPI installation:
+
+```bash
+python -m pip install --upgrade FigCompose
+```
+
+To pin the current release for reproducible environments, use `python -m pip install "FigCompose==0.1.1"`.
+
+### Source development
 
 For source development, clone the repository and use an editable install:
 
 ```bash
 git clone https://github.com/frederickc8896-Fabulous/FigCompose.git
 cd FigCompose
+python -m pip install -e .
+```
+
+To update an existing editable checkout, run these commands from the repository root:
+
+```bash
+git pull --ff-only
 python -m pip install -e .
 ```
 
