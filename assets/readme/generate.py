@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT))
 from data_visuals import plot
 from data_visuals.utils.colors import (
     SEQUENTIAL_SCHEMES,
-    get_palette_flat,
+    get_palette,
     list_palettes,
 )
 
@@ -138,11 +138,12 @@ def page(height, title, subtitle):
 
 def build_categorical_catalog():
     registry = list_palettes()
-    height = 160 + 48 * len(registry) + 96 * sum(map(len, registry.values())) + 48
+    preset_count = sum(map(len, registry.values()))
+    height = 160 + 48 * len(registry) + 96 * preset_count + 48
     figure, ax = page(
         height, "FigCompose | Curated color presets",
-        "12 original combinations. Exact colors and order from the registry; "
-        "use the preset name as the palette argument.",
+        f"{preset_count} curated combinations. Exact registry colors and order; "
+        "outlined swatches mark the main color.",
     )
     y = 156
     for size, styles in registry.items():
@@ -150,12 +151,16 @@ def build_categorical_catalog():
         ax.text(LEFT, y + 12, f"{size} COLORS", fontsize=14, weight="bold", color=INK, va="top")
         y += 48
         for style in styles:
-            ax.text(LEFT, y + 12, f"curated-{size}-{style}", fontsize=15, color=INK, va="top")
-            colors = get_palette_flat(size, style=style)
+            preset_name = f"curated-{size}-{style}"
+            ax.text(LEFT, y + 12, preset_name, fontsize=15, color=INK, va="top")
+            palette = get_palette(size, style=preset_name)
+            colors = palette.to_flat()
             step = (RIGHT - SWATCH_LEFT + 6) / len(colors)
             for index, color in enumerate(colors):
                 x = SWATCH_LEFT + index * step
-                ax.add_patch(Rectangle((x, y), step - 6, 43, facecolor=color, edgecolor="none"))
+                is_main = color.lower() == palette.ours_color.lower()
+                ax.add_patch(Rectangle((x, y), step - 6, 43, facecolor=color,
+                                       edgecolor=INK if is_main else "none", linewidth=1))
                 ax.text(x + (step - 6) / 2, y + 53, color.upper(), fontsize=10.5,
                         family="DejaVu Sans Mono", color=INK, ha="center", va="top")
             y += 96

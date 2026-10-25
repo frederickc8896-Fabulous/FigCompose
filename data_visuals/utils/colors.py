@@ -122,6 +122,16 @@ _PALETTES: Dict[int, Dict[str, Palette]] = {
         ),
     },
 
+    # Explicit eight-colour preset; legacy automatic lookup still uses ten.
+    8: {
+        "rose-blue": Palette(
+            colors=["#FCE7EC", "#E8B3C6", "#D79AB7", "#D8D4EA",
+                    "#D4E4F2", "#9CC6E6", "#5B7FAF", "#0F2855"],
+            ours_color="#D79AB7",
+            description="柔粉 → 薰衣草 → 雾蓝 → 深海蓝；主色 #D79AB7",
+        ),
+    },
+
     # ── 8+ 个模型: 大型对比 (10 色) ───────────────────────────
     10: {
         "default": Palette(
@@ -161,6 +171,7 @@ _CURATED_SCHEMES = {
     2: {"default": "blues", "cool": "blues", "warm": "amber"},
     5: {"default": "blues", "cool": "blues", "warm": "amber"},
     7: {"default": "blues", "cool": "blues", "warm": "amber"},
+    8: {"rose-blue": "blues"},
     10: {"default": "blues", "muted": "blues", "vibrant": "blues"},
 }
 for _size, _schemes in _CURATED_SCHEMES.items():
@@ -170,6 +181,8 @@ for _size, _schemes in _CURATED_SCHEMES.items():
             "palette_bucket": str(_size),
             "palette_style": _style,
             "sequential": _scheme,
+            "primary_index": str(_PALETTES[_size][_style].colors.index(
+                _PALETTES[_size][_style].ours_color)),
         }
 
 # 风格名 → 显示名
@@ -181,8 +194,9 @@ _STYLE_LABELS: Dict[str, str] = {
     "vibrant": "鲜艳",
 }
 
-# 组数桶的有序列表（用于搜索最近桶）
-_BUCKET_SIZES = sorted(_PALETTES.keys())  # [2, 5, 7, 10]
+# Only buckets with a default participate in legacy automatic selection.
+# Explicit curated presets may have other capacities without changing it.
+_BUCKET_SIZES = sorted(size for size, styles in _PALETTES.items() if "default" in styles)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -234,9 +248,9 @@ def get_color_preset(name: str) -> Dict[str, str]:
         )
     preset = deepcopy(COLOR_PRESETS[name])
     if "palette_bucket" in preset:
-        source = get_palette(int(preset["palette_bucket"]), preset["palette_style"])
+        source = get_palette(int(preset["palette_bucket"]), name)
         preset = {**_AUXILIARY_COLORS, **preset}
-        preset["trend_line"] = source.colors[0]
+        preset["trend_line"] = source.colors[int(preset.get("primary_index", "0"))]
         preset["y2_axis"] = source.colors[-1]
     return preset
 

@@ -18,7 +18,7 @@ FigCompose 以整张 Figure 为单位，统一管理物理尺寸、字号、分�
 
 - **少量声明生成整图**：CSV 或 DataFrame 输入，选择指标、图种和风格，自动安排单图或多子图。
 - **统一物理版式**：mm / in 画布、固定 pt 字号、共享图例与实测留白，导出 PDF / SVG / PNG。
-- **整篇论文复用**：配置统一保存字体、12 套精选配色、字段显示和系列身份；不同 CSV 缺少某个模型时，其余模型保持原有颜色与点形。
+- **整篇论文复用**：配置统一保存字体、13 套精选配色、字段显示和系列身份；不同 CSV 缺少某个模型时，其余模型保持原有颜色与点形。
 - **实测检查与对比**：定位文字越界、刻度碰撞和字号问题，保存布局快照，核对后续修改。
 - **Matplotlib 原生扩展**：内置 10 类统计图，可混排自定义结构图、极坐标图和三维图。
 
@@ -110,7 +110,7 @@ fig.render("figure.png", dpi=300)
 - `canvas` 控制整张 Figure 的物理尺寸，默认宽 180 mm；只给宽度时测量后自动求高，也可指定 `unit="in"`。
   `{"width": 180, "height": 110}` 固定整图尺寸，装不下时报告布局错误。
 - `style` 支持 `general`、`modern`；`palette` 独立选择配色。
-  `from data_visuals import list_color_presets` 可查询全部 12 套精选配色。
+  `from data_visuals import list_color_presets` 可查询全部 13 套精选配色。
 - 导出支持 `.pdf`、`.svg`、`.png`。DPI 只改变 PNG 像素密度，不改变物理尺寸与版式。
 - CSV 读取参数通过 `csv_options` 传入，例如 `{"encoding": "utf-8-sig", "delimiter": ","}`。
 
@@ -309,12 +309,17 @@ FigCompose 采用 [Apache License 2.0](https://github.com/frederickc8896-Fabulou
 
 ### 分类色与整图预设
 
-以下 **12 套**预设直接引用 `data_visuals/utils/colors.py` 中的原始搭配，色号与顺序保持不变。
+以下 **13 套**预设直接引用 `data_visuals/utils/colors.py` 中的精选搭配，色号与顺序保持不变。
 在 `plot()` 中传入完整名称，例如 `palette="curated-5-warm"`；`style` 独立控制字体与排版。
-名称中的 2 / 5 / 7 / 10 表示类别容量：类别较少时取前几色，超出容量时需选择更大的预设。
+名称中的 2 / 5 / 7 / 8 / 10 表示类别容量：类别较少时取前几色，超出容量时需选择更大的预设。
 `cool`、`warm` 等名称沿用原配置，实际冷暖分布请以色卡为准。
 
-![FigCompose 全部 12 套精选分类色卡，标注预设名和十六进制色号](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_presets.png)
+新增八色预设 `palette="curated-8-rose-blue"`，由浅粉、淡紫过渡到深蓝。
+主色为第三位的 **`#D79AB7`**。类别仍按原始色号顺序分配，不会自动将主色绑定到名为 `ours` 或其他名称的系列。
+色卡以细边框标出各组存储的主色。
+该新预设目前在仓库源码中可用，PyPI 0.1.1 尚未包含。
+
+![FigCompose 全部 13 套精选分类色卡，标注预设名、十六进制色号和主色边框](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_presets.png)
 
 [查看矢量色卡](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_presets.svg)。可通过 `list_color_presets()` 查询所有名称：
 

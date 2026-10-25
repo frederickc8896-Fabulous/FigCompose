@@ -18,7 +18,7 @@ for the whole figure, reducing repeated style and spacing adjustments when combi
 
 - **Describe a complete figure**: use a CSV or DataFrame, select metrics, chart types and a style, and arrange one or several panels automatically.
 - **Consistent physical layout**: mm / in canvases, fixed font sizes in pt, shared legends and measured margins, with PDF / SVG / PNG export.
-- **Reuse settings across a paper**: save fonts, a choice of 12 curated palettes, field display metadata and series identities. When a model is absent from another CSV, the remaining models retain their colors and markers.
+- **Reuse settings across a paper**: save fonts, a choice of 13 curated palettes, field display metadata and series identities. When a model is absent from another CSV, the remaining models retain their colors and markers.
 - **Measure and compare**: locate overflowing text, tick collisions and font-size issues, then save layout snapshots to check later changes.
 - **Extend with native Matplotlib**: 10 built-in chart types can share a figure with custom diagrams, polar plots and 3D plots.
 
@@ -112,7 +112,7 @@ fig.render("figure.png", dpi=300)
 - `canvas` sets the physical size of the entire figure. The default width is 180 mm; omit height to measure the content and solve for height automatically. Use `unit="in"` for inches.
   `{"width": 180, "height": 110}` fixes both dimensions; a layout error is reported if the content cannot fit.
 - `style` supports `general` and `modern`; `palette` selects colors independently.
-  Import `list_color_presets` from `data_visuals` to list all 12 curated palettes.
+  Import `list_color_presets` from `data_visuals` to list all 13 curated palettes.
 - Export to `.pdf`, `.svg` or `.png`. DPI changes PNG pixel density without changing physical dimensions or layout.
 - Pass CSV reading settings through `csv_options`, for example `{"encoding": "utf-8-sig", "delimiter": ","}`.
 
@@ -325,13 +325,19 @@ FigCompose is licensed under the [Apache License 2.0](https://github.com/frederi
 
 ### Categorical colors and figure presets
 
-These **12 presets** reference the original combinations in `data_visuals/utils/colors.py`, preserving their hex values and order.
+These **13 presets** reference the selected combinations in `data_visuals/utils/colors.py`, preserving their hex values and order.
 Pass a full name to `plot()`, such as `palette="curated-5-warm"`; `style` controls typography and layout independently.
-The numbers 2 / 5 / 7 / 10 indicate category capacity: smaller category sets use the first colors;
+The numbers 2 / 5 / 7 / 8 / 10 indicate category capacity: smaller category sets use the first colors;
 choose a larger preset when you exceed the capacity.
 Names such as `cool` and `warm` come from the original configuration; refer to the swatches for the actual color balance.
 
-![All 12 FigCompose curated categorical palettes, with preset names and hexadecimal colors](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_presets.png)
+The eight-color `palette="curated-8-rose-blue"` runs from pale pink through lavender to deep blue.
+Its main color is **`#D79AB7`**, the third swatch. Categories receive colors in the stored order;
+the main color is not automatically assigned to a method named `ours` or any other series.
+Outlined swatches mark the stored main colors in the catalog.
+This new preset is available in the repository source; the PyPI 0.1.1 release does not yet include it.
+
+![All 13 FigCompose curated categorical palettes, with preset names, hexadecimal colors and outlined main colors](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_presets.png)
 
 [Vector catalog](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_presets.svg). List every preset name with `list_color_presets()`:
 
