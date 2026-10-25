@@ -1,10 +1,10 @@
 # FigCompose
 
 <p>
-  <img src="assets/branding/figcompose-logo-v1.png" alt="FigCompose Logo" width="460">
+  <img src="https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/branding/figcompose-logo-v1.png" alt="FigCompose Logo" width="460">
 </p>
 
-[English](README.md) | **简体中文**
+[English](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/README.md) | **简体中文**
 
 Compose publication figures with Matplotlib.
 
@@ -24,15 +24,24 @@ FigCompose 以整张 Figure 为单位，统一管理物理尺寸、字号、分�
 
 ## 图表示例
 
-![FigCompose 常用论文图表：分组柱状图及标准差、折线图、散点图、箱线图、直方图、热力图、混淆矩阵、环形图和雷达图](assets/readme/traditional_charts.png)
+![FigCompose 常用论文图表：分组柱状图及标准差、折线图、散点图、箱线图、直方图、热力图、混淆矩阵、环形图和雷达图](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/traditional_charts.png)
 
 九个面板均通过 FigCompose 的声明式接口生成，共用字体、方法颜色与整图图例。
 数据为固定随机种子的合成示例；另支持饼图及下表中的图种变体。
-[查看矢量图](assets/readme/traditional_charts.svg) · [生成脚本](assets/readme/generate.py)
+[查看矢量图](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/traditional_charts.svg) · [生成脚本](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/generate.py)
 
 ## 安装
 
 需要 Python 3.10+。
+
+```bash
+python -m pip install FigCompose
+```
+
+分发包名为 `FigCompose`，导入方式仍为 `from data_visuals import plot`。
+升级使用 `python -m pip install --upgrade FigCompose`。
+
+从源码开发时，克隆仓库并进行可编辑安装：
 
 ```bash
 git clone https://github.com/frederickc8896-Fabulous/FigCompose.git
@@ -271,11 +280,11 @@ FigCompose 负责可复用的样式与整图排版。数据列、统计口径、
 自定义结构图的内部节点与连线也由绘制函数安排。
 
 仓库包含绘图库源码、主题、安装配置、中英文 README 及其展示素材；本地演示、输出、测试、详细文档和实验数据均已忽略。
-上面的示例自带数据，克隆并安装后即可运行。重新生成 README 图片：`python assets/readme/generate.py`。
+上面的示例自带数据，安装 FigCompose 后即可运行。重新生成 README 图片：`python assets/readme/generate.py`。
 
 ## 许可证
 
-FigCompose 采用 [Apache License 2.0](LICENSE) 许可证。
+FigCompose 采用 [Apache License 2.0](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/LICENSE) 许可证。
 
 ## 配色色卡
 
@@ -286,9 +295,9 @@ FigCompose 采用 [Apache License 2.0](LICENSE) 许可证。
 名称中的 2 / 5 / 7 / 10 表示类别容量：类别较少时取前几色，超出容量时需选择更大的预设。
 `cool`、`warm` 等名称沿用原配置，实际冷暖分布请以色卡为准。
 
-![FigCompose 全部 12 套精选分类色卡，标注预设名和十六进制色号](assets/readme/color_presets.png)
+![FigCompose 全部 12 套精选分类色卡，标注预设名和十六进制色号](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_presets.png)
 
-[查看矢量色卡](assets/readme/color_presets.svg)。可通过 `list_color_presets()` 查询所有名称：
+[查看矢量色卡](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_presets.svg)。可通过 `list_color_presets()` 查询所有名称：
 
 ```python
 from data_visuals import list_color_presets
@@ -302,6 +311,6 @@ print(list_color_presets())
 例如 `chart_opts={"color_scheme": "blues"}`。
 下方展示全部 **5 套**原始色阶，渐变与原始色阶节点对应。
 
-![FigCompose 连续色阶：warm-cool、coastal、blues、amber、rose，以及原始色号](assets/readme/color_schemes.png)
+![FigCompose 连续色阶：warm-cool、coastal、blues、amber、rose，以及原始色号](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_schemes.png)
 
-[查看矢量色卡](assets/readme/color_schemes.svg)
+[查看矢量色卡](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_schemes.svg)

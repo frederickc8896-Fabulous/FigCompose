@@ -1,10 +1,10 @@
 # FigCompose
 
 <p>
-  <img src="assets/branding/figcompose-logo-v1.png" alt="FigCompose logo" width="460">
+  <img src="https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/branding/figcompose-logo-v1.png" alt="FigCompose logo" width="460">
 </p>
 
-**English** | [简体中文](README.zh-CN.md)
+**English** | [简体中文](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/README.zh-CN.md)
 
 Compose publication figures with Matplotlib.
 
@@ -25,15 +25,24 @@ the Python import path remains `data_visuals` for compatibility.
 
 ## Gallery
 
-![Common publication charts in FigCompose: grouped bars with standard deviation, lines, scatter, boxes, histogram, heatmap, confusion matrix, donut and radar](assets/readme/traditional_charts.png)
+![Common publication charts in FigCompose: grouped bars with standard deviation, lines, scatter, boxes, histogram, heatmap, confusion matrix, donut and radar](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/traditional_charts.png)
 
 All nine panels use FigCompose's declarative API, sharing fonts, method colors and a figure-level legend.
 The data are synthetic, generated with a fixed random seed. Pie charts and the variants listed below are also supported.
-[Vector image](assets/readme/traditional_charts.svg) · [Generation script](assets/readme/generate.py)
+[Vector image](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/traditional_charts.svg) · [Generation script](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/generate.py)
 
 ## Installation
 
 Requires Python 3.10+.
+
+```bash
+python -m pip install FigCompose
+```
+
+The distribution name is `FigCompose`; import it with `from data_visuals import plot`.
+Upgrade with `python -m pip install --upgrade FigCompose`.
+
+For source development, clone the repository and use an editable install:
 
 ```bash
 git clone https://github.com/frederickc8896-Fabulous/FigCompose.git
@@ -286,12 +295,12 @@ axis ranges and scientific presentation. Custom drawing callbacks also arrange t
 
 The repository includes library source, themes, installation metadata, Chinese and English READMEs and their gallery assets.
 Local demos, outputs, tests, detailed documentation and experimental data are ignored.
-The examples above include their own data and run after cloning and installing.
+The examples above include their own data and run after installing FigCompose.
 Regenerate the README images with `python assets/readme/generate.py`.
 
 ## License
 
-FigCompose is licensed under the [Apache License 2.0](LICENSE).
+FigCompose is licensed under the [Apache License 2.0](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/LICENSE).
 
 ## Color catalog
 
@@ -303,9 +312,9 @@ The numbers 2 / 5 / 7 / 10 indicate category capacity: smaller category sets use
 choose a larger preset when you exceed the capacity.
 Names such as `cool` and `warm` come from the original configuration; refer to the swatches for the actual color balance.
 
-![All 12 FigCompose curated categorical palettes, with preset names and hexadecimal colors](assets/readme/color_presets.png)
+![All 12 FigCompose curated categorical palettes, with preset names and hexadecimal colors](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_presets.png)
 
-[Vector catalog](assets/readme/color_presets.svg). List every preset name with `list_color_presets()`:
+[Vector catalog](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_presets.svg). List every preset name with `list_color_presets()`:
 
 ```python
 from data_visuals import list_color_presets
@@ -319,6 +328,6 @@ Heatmaps and confusion matrices default to the continuous scale paired with the 
 Override it per panel, for example with `chart_opts={"color_scheme": "blues"}`.
 All **5 original scales** appear below; gradients correspond to the original color stops.
 
-![FigCompose continuous scales: warm-cool, coastal, blues, amber and rose, with their original hexadecimal colors](assets/readme/color_schemes.png)
+![FigCompose continuous scales: warm-cool, coastal, blues, amber and rose, with their original hexadecimal colors](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_schemes.png)
 
-[Vector catalog](assets/readme/color_schemes.svg)
+[Vector catalog](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_schemes.svg)

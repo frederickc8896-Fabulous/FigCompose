@@ -1,0 +1,21 @@
+include LICENSE
+include README.md
+include README.zh-CN.md
+recursive-include data_visuals/themes *.json
+
+prune .agents
+prune .codex
+prune .test_artifacts
+prune .test_tmp
+prune demo
+prune demo_outputs
+prune docs
+prune test
+prune tests
+prune mock_data
+prune output
+prune outputs
+exclude AGENTS.md
+exclude CANVAS_CONTRACT.md
+exclude global.yaml
+global-exclude __pycache__ *.py[cod]

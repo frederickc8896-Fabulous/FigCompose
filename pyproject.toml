@@ -22,6 +22,8 @@ classifiers = [
 ]
 
 dependencies = [
+    "numpy>=1.23.5",
+    "cycler>=0.10",
     "pandas>=2.0",
     "matplotlib>=3.7",
     "pyyaml>=6.0",
