@@ -8,11 +8,12 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 from matplotlib import colormaps
-from matplotlib.colors import LinearSegmentedColormap, Normalize, to_rgb
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.lines import Line2D
 from matplotlib.ticker import FuncFormatter
 
 from data_visuals.utils.colors import SEQUENTIAL_SCHEMES
+from data_visuals.renderer.mpl.presentation import best_text_color, luminance
 
 
 def frame(rows):
@@ -194,9 +195,7 @@ def colorbar(ax, image, sp, cfg):
 
 
 def _luminance(color):
-    rgb = np.asarray(to_rgb(color))
-    linear = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
-    return float(linear @ [0.2126, 0.7152, 0.0722])
+    return luminance(color)
 
 
 def annotate_matrix(ax, image, matrix, sp, cfg, fmt):
@@ -207,11 +206,7 @@ def annotate_matrix(ax, image, matrix, sp, cfg, fmt):
     for (row, col), value in np.ndenumerate(matrix):
         if not np.isfinite(value):
             continue
-        lum = _luminance(image.cmap(image.norm(value))[:3])
-        def contrast(color):
-            fg = _luminance(color)
-            return (max(lum, fg) + 0.05) / (min(lum, fg) + 0.05)
-        text_color = max((cfg.text_color, cfg.background), key=contrast)
+        text_color = best_text_color(image.cmap(image.norm(value))[:3], (cfg.text_color, cfg.background))
         ax.text(col, row, formatter(value), ha="center", va="center",
                 fontsize=sp["font_sizes"]["tick"], fontfamily=cfg.font_family,
                 fontweight=cfg.tick_label_weight, color=text_color)

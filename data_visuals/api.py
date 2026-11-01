@@ -63,7 +63,10 @@ def plot(
     an existing chart type; ``metric`` selects its measured column (``y`` for
     bar/line/box/scatter/radar, ``x`` for histogram, and ``value`` for
     heatmap/confusion/pie/donut). Pie/donut require ``group`` and sum their
-    values per category; omit ``metric``/``value`` to count rows. Radar uses
+    values per category; omit ``metric``/``value`` to count rows. Circular bars
+    use ``x`` for object IDs, ``group`` for metrics, and ``metric`` for scores;
+    each metric retains its own declared ``value_range`` (default 0--100).
+    Radar uses
     ``x`` for metric names and requires every series to contain all metrics.
     Native chart mappings and options are also accepted in the entry.
     ``palette`` optionally selects an original curated combination, such as
@@ -75,7 +78,7 @@ def plot(
     typography, palette, legends, field labels/units/formats and series identity.
     Explicit call arguments and panel options override those defaults.
 
-    Global ``x`` and ``group`` are defaults for bar/line/box/scatter/radar.
+    Global ``x`` and ``group`` are defaults for bar/line/box/scatter/radar/circular_bar.
     Pie/donut and histogram inherit only ``group``; matrix plots require explicit axes. An entry can
     override a default, including ``group=None`` to turn grouping off.
 
@@ -126,7 +129,7 @@ def plot(
             if target in declaration:
                 raise ValueError(f"plots[{index}] 的 metric 与 {target} 重复，请只指定其中一个。")
             declaration[target] = declaration.pop("metric")
-        if kind in {"bar", "line", "box", "scatter", "radar"} and x is not None:
+        if kind in {"bar", "line", "box", "scatter", "radar", "circular_bar"} and x is not None:
             declaration.setdefault("x", x)
         if "group" in (set(chart.required_fields) | set(chart.optional_fields)) and group is not None:
             declaration.setdefault("group", group)

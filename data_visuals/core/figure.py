@@ -50,6 +50,7 @@ from data_visuals.data.labels import resolve_labels
 from data_visuals.compute.aggregation import aggregate, mean_repeated_series
 from data_visuals.compute.preprocess import normalize_percent_frame, complete_cartesian_grid, normalize_group_sum
 from data_visuals.compute.statistics import overall_mean, loess_smooth, density_curve, boxplot_payload
+from data_visuals.compute.circular import compute_circular_bar
 
 
 def _filter_subplot_data(
@@ -543,7 +544,12 @@ class Figure:
             cols = req.get("columns", {})
             derived[(row, col)] = {}
             chart = chart_specs.get((row, col))
-            if chart and chart.chart_type in {"pie", "donut", "radar"}:
+            if chart and chart.chart_type == "circular_bar":
+                computed[(row, col)], derived[(row, col)] = compute_circular_bar(
+                    panel_df, chart.mapping, value_range=chart.value_range,
+                    aggregate=chart.aggregate, summary=chart.summary, center=chart.center,
+                )
+            elif chart and chart.chart_type in {"pie", "donut", "radar"}:
                 # Observe only supplied categories. Categorical dtypes can
                 # otherwise synthesize absent radar axes or zero-size slices.
                 value = chart.mapping.get("value")
@@ -727,6 +733,13 @@ class Figure:
             chart = chart_specs.get((row, col))
             if not chart:
                 continue
+            if chart.chart_type == "circular_bar" and self._subplot_decls[(row, col)].get("y_columns"):
+                # Series selection changes summaries as well as visible marks.
+                computed[(row, col)], derived[(row, col)] = compute_circular_bar(
+                    cdf, chart.mapping, value_range=chart.value_range,
+                    summary=chart.summary, center=chart.center,
+                )
+                cdf = computed[(row, col)]
             y_col_name = chart.mapping.get("y")
             if isinstance(y_col_name, str) and y_col_name in cdf.columns:
                 _num_warnings = check_numeric_columns(
@@ -845,9 +858,9 @@ class Figure:
             if group_col and group_col in cdf.columns and labels:
                 cdf = cdf.copy()
                 cdf[group_col] = cdf[group_col].map(labels).fillna(cdf[group_col])
-                identity = ([group_col, chart.mapping["x"]] if chart.chart_type == "radar"
+                identity = ([group_col, chart.mapping["x"]] if chart.chart_type in {"radar", "circular_bar"}
                             else [group_col])
-                if chart.chart_type in {"pie", "donut", "radar"} and cdf.duplicated(identity).any():
+                if chart.chart_type in {"pie", "donut", "radar", "circular_bar"} and cdf.duplicated(identity).any():
                     raise ValueError(
                         f"子图 [{row},{col}] ({chart.chart_type}) labels 将不同类别合并为同名；"
                         "请为每个类别指定不同的显示名，或先在数据层明确合并。"
@@ -859,6 +872,12 @@ class Figure:
                         payload = payload.copy()
                         payload[group_col] = payload[group_col].map(labels).fillna(payload[group_col])
                         derived[(row, col)][name] = payload
+                if chart and chart.chart_type == "circular_bar":
+                    payload = derived[(row, col)].get("circular_bar", {})
+                    payload["summaries"] = [
+                        {**item, "group": display(group_col, item["group"])}
+                        for item in payload.get("summaries", [])
+                    ]
 
         # Reserve colours from the full source domain before subplot filtering.
         color_domains: Dict[str, List[Any]] = deepcopy(series_order)
@@ -1036,7 +1055,7 @@ class Figure:
         # explicitly rather than inheriting another panel's numeric labels.
         for cell in layout_spec["cells"]:
             decl = self._subplot_decls.get((cell["row"], cell["col"]))
-            if decl and decl["chart_type"] in {"custom", "pie", "donut", "radar"}:
+            if decl and decl["chart_type"] in {"custom", "pie", "donut", "radar", "circular_bar"}:
                 cell["shared_axes"] = {
                     "x_shared": False, "y_shared": False,
                     "x_shared_with": -1, "y_shared_with": -1,
@@ -1055,7 +1074,7 @@ class Figure:
                 if decl.get("domain"):
                     chart_opts["domain"] = decl["domain"]
                 if decl.get("chart_opts"):
-                    if chart.chart_type in {"pie", "donut", "radar"}:
+                    if chart.chart_type in {"pie", "donut", "radar", "circular_bar"}:
                         # The validated ChartSpec already resolved typed
                         # overrides and converted NumPy scalars to JSON-safe
                         # values. Reapply only renderer-specific options.

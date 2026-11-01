@@ -21,6 +21,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from data_visuals.themes import load_theme, get_color_palette
 from data_visuals.utils.colors import get_color_preset, SEQUENTIAL_SCHEMES
+from data_visuals.renderer.mpl.presentation import blend, readable_text_color
 
 
 # Only visual defaults belong to the renderer. In particular, do not reset a
@@ -106,6 +107,8 @@ class MplConfig:
         self.trend_line_color = color.get("trend_line", "#c0392b")
         self.error_bar_color = color.get("error_bar", "#333333")
         self.y2_color = color.get("y2_axis", "#c0392b")
+        # Supporting roles are derived from the current paper's colours. They
+        # never replace categorical glyph colours or reserve new palette slots.
         self.palette_style = color.get("palette_style", "default")
         self.sequential = color.get("sequential", "viridis")
 
@@ -197,6 +200,26 @@ class MplConfig:
     def get_color(self, idx: int) -> str:
         """Safe indexed access to categorical palette."""
         return self.categorical_palette[idx % len(self.categorical_palette)]
+
+    @property
+    def muted_text_color(self):
+        """Resolve against the final background, including Figure overrides."""
+        return readable_text_color(
+            blend(self.text_color, self.background, .40), self.background,
+            fallback=self.text_color,
+        )
+
+    @property
+    def support_line_color(self):
+        return blend(self.axis_color, self.background, .65)
+
+    def support_fill(self, color: str):
+        """A quiet track/fill retaining the selected category's hue."""
+        return blend(color, self.background, .91)
+
+    def annotation_color(self, color: str):
+        """Readable accent text; its corresponding data colour stays intact."""
+        return readable_text_color(color, self.background, fallback=self.text_color)
 
     @staticmethod
     def _dash_to_mpl(dash_spec):

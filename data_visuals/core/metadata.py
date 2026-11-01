@@ -138,6 +138,12 @@ def resolve_field_options(kind, mapping, options, fields, *, data=None):
     if kind == "radar":
         _resolve_value(resolved, mapping.get("y"), fields)
         return resolved
+    if kind == "circular_bar":
+        _resolve_value(resolved, mapping.get("y"), fields, label=True)
+        for key, column in (("object_label", mapping.get("x")), ("series_label", mapping.get("group"))):
+            if column in fields and "label" in fields[column]:
+                resolved.setdefault(key, field_label(column, fields, include_unit=False))
+        return resolved
     if kind == "histogram":
         _resolve_axis(resolved, "x", mapping.get("x"), fields, numeric=True)
         return resolved

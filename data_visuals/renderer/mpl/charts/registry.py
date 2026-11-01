@@ -23,6 +23,7 @@ def _populate() -> None:
     from data_visuals.renderer.mpl.charts.confusion import _draw_confusion
     from data_visuals.renderer.mpl.charts.pie import _draw_pie
     from data_visuals.renderer.mpl.charts.radar import _draw_radar
+    from data_visuals.renderer.mpl.charts.circular_bar import _draw_circular_bar
 
     _BUILDERS.update({
         "bar": _draw_bar,
@@ -35,6 +36,7 @@ def _populate() -> None:
         "pie": _draw_pie,
         "donut": _draw_pie,
         "radar": _draw_radar,
+        "circular_bar": _draw_circular_bar,
     })
 
 

@@ -20,7 +20,7 @@ for the whole figure, reducing repeated style and spacing adjustments when combi
 - **Consistent physical layout**: mm / in canvases, fixed font sizes in pt, shared legends and measured margins, with PDF / SVG / PNG export.
 - **Reuse settings across a paper**: save fonts, a choice of 13 curated palettes, field display metadata and series identities. When a model is absent from another CSV, the remaining models retain their colors and markers.
 - **Measure and compare**: locate overflowing text, tick collisions and font-size issues, then save layout snapshots to check later changes.
-- **Extend with native Matplotlib**: 10 built-in chart types can share a figure with custom diagrams, polar plots and 3D plots.
+- **Extend with native Matplotlib**: 11 built-in chart types in the repository source can share a figure with custom diagrams, polar plots and 3D plots.
 
 This project is in Alpha; interfaces are still evolving. The project and distribution are named **FigCompose**;
 the Python import path remains `data_visuals` for compatibility.
@@ -189,11 +189,45 @@ If several metrics on one axis declare incompatible units or formats, provide an
 | Confusion matrix | `confusion` | `x`, `y`, optional `metric` | Counts or sums supplied quantities; optional row normalization |
 | Pie / donut | `pie` / `donut` | `group`, optional `metric` | Category sums; counts rows when the value column is omitted |
 | Radar | `radar` | `x`, `metric`, optional `group` | Mean of repeated observations; at least three complete metric axes |
+| Concentric circular bars | `circular_bar` | `x` object ID, `group` metric, `metric` score | Independent score scales; exact rounded ends, aligned object rings and optional group means |
 
 `metric` selects Y values for ordinary charts and radar plots, distribution values for histograms,
 and quantities or color values for matrix and pie charts.
 Pie shares must be finite and nonnegative, with a positive total. Radar plots use long-form data;
 they do not normalize values or fill missing metrics automatically.
+
+### Concentric scores without a drawing callback
+
+`circular_bar` is new in the repository source and is **not included in PyPI 0.1.1**.
+Use a source installation for this example. Each object occupies the same ring in every sector;
+the filled angle encodes its score on an independent scale, rather than a share of a total.
+The default canvas is white, with the same fonts, curated palette and series identities as other charts.
+
+```python
+import pandas as pd
+from data_visuals import plot
+
+data = pd.DataFrame({
+    "participant": ["P01", "P02", "P03"] * 4,
+    "subject": ["Math"] * 3 + ["English"] * 3 + ["Physics"] * 3 + ["Geography"] * 3,
+    "score": [84, 76, 91, 65, 83, 72, 58, 79, 68, 88, 62, 75],
+})
+fig = plot(
+    data,  # Or a long-form CSV with these columns
+    x="participant", group="subject",
+    plots=[{"kind": "circular_bar", "metric": "score", "summary": "mean", "title": None}],
+    canvas={"width": 180}, style="modern", palette="curated-7-warm",
+    title="Four subjects, three participant profiles",
+)
+fig.render("circular_scores.pdf")
+fig.render("circular_scores.png", dpi=300)
+```
+
+- `value_range=(0, 100)` sets the score scale. Set `(0, 1)` for proportions; values are never guessed or silently rescaled.
+- Each object/metric pair must be present. Missing pairs are rejected; duplicate pairs require an explicit `aggregate="mean"`, `"median"` or `"sum"`.
+- `summary="mean"` requests unweighted means over the per-object scores. Summaries are calculated before rendering; no summary is added by default.
+- `center="count"` shows the unique object count; `center=None` hides it. `order` sets ring order and `rounded=False` selects flat ends.
+- Palette order and registered series identities remain stable across figures. Small figures can show fewer object labels while retaining every score and the original physical text size.
 
 The figure-level `legend` controls shared or local legends, position, columns, font size, frame, order and display labels.
 Panels override it through `chart_opts={"legend": {...}}`; `legend=False` hides legends.
@@ -314,7 +348,8 @@ axis ranges and scientific presentation. Custom drawing callbacks also arrange t
 
 The repository includes library source, themes, installation metadata, Chinese and English READMEs and their gallery assets.
 Local demos, outputs, tests, detailed documentation and experimental data are ignored.
-The examples above include their own data and run after installing FigCompose.
+The examples above include their own data. The circular-bar example requires the repository source;
+the other examples also run with the published package.
 Regenerate the README images with `python assets/readme/generate.py`.
 
 ## License

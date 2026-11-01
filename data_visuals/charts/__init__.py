@@ -21,6 +21,7 @@ charts/ — 图表类型定义层
     - confusion — 混淆矩阵
     - pie / donut — 饼图与环形图
     - radar — 雷达图
+    - circular_bar — 独立量尺的同心环条图
 """
 
 from __future__ import annotations
@@ -337,4 +338,5 @@ from data_visuals.charts.histogram import Histogram  # noqa: E402, F401
 from data_visuals.charts.confusion import Confusion  # noqa: E402, F401
 from data_visuals.charts.pie import Pie, Donut  # noqa: E402, F401
 from data_visuals.charts.radar import Radar  # noqa: E402, F401
+from data_visuals.charts.circular_bar import CircularBar  # noqa: E402, F401
 

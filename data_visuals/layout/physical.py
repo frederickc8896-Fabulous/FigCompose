@@ -24,7 +24,7 @@ def _preferred_aspect(panel):
     if panel.custom_panel is not None:
         custom = panel.custom_panel
         return custom.box_aspect or custom.preferred_aspect
-    if panel.chart_type in {"pie", "donut", "radar"}:
+    if panel.chart_type in {"pie", "donut", "radar", "circular_bar"}:
         return 1.0
     if panel.chart_type in {"heatmap", "confusion"}:
         data = panel.computed_data
@@ -155,7 +155,7 @@ def _commit_measured_geometry(spec, measured):
 
 
 def _score(spec, measured):
-    aspects, undersized, round_fit = [], [], []
+    aspects, undersized, round_fit, circular_fill = [], [], [], []
     for panel in spec.subplots:
         record = measured["cells"].get((panel.row, panel.col))
         if record is None:
@@ -170,14 +170,22 @@ def _score(spec, measured):
         target_h = target_w / aspect
         undersized.append(max(0, target_w / zone["w"] - 1) ** 2
                           + max(0, target_h / zone["h"] - 1) ** 2)
-        if panel.chart_type in {"pie", "donut", "radar"}:
+        if panel.chart_type in {"pie", "donut", "radar", "circular_bar"}:
             # Compare the actual square viewport with the cell's short side,
             # not its area: circular content cannot fill a wide final-row span.
             fit = min(zone["w"], zone["h"]) / min(cell["w"], cell["h"])
             round_fit.append(max(0, 1 - fit) ** 2)
+        if panel.chart_type == "circular_bar":
+            # Direct sector labels and a reading key need more vertical room
+            # than pie slices. Avoid rewarding a short canvas whose square
+            # viewport leaves much of its usable width empty.
+            gutters = record.get("gutters", {})
+            available_w = cell["w"] - gutters.get("left", 0) - gutters.get("right", 0)
+            circular_fill.append(max(0, 1 - zone["w"] / max(1, available_w)) ** 2)
     count = max(1, len(aspects))
     return (0.65 * sum(aspects) / count + 0.8 * sum(undersized) / count
             + 0.25 * sum(round_fit) / count
+            + 3.0 * sum(circular_fill) / count
             + (0.45 * spec.canvas["height"] / spec.canvas["width"] if spec.canvas["height_auto"] else 0))
 
 
@@ -201,7 +209,7 @@ def _compact_height(spec, measured, cfg):
         if minimum is None:
             if panel.custom_panel is not None:
                 minimum = panel.custom_panel.min_size
-            elif panel.chart_type in {"pie", "donut", "radar"}:
+            elif panel.chart_type in {"pie", "donut", "radar", "circular_bar"}:
                 minimum = max(60.0, cfg.min_plot_width), max(60.0, cfg.min_plot_height)
             else:
                 minimum = cfg.min_plot_width, cfg.min_plot_height
@@ -227,6 +235,13 @@ def _comfortable_height(spec, measured, cfg, columns):
             continue
         cell, zone = record["cell"], record["data_zone"]
         preferred_width = zone["w"]
+        if panel.chart_type == "circular_bar":
+            # zone is already aspect-fitted; recover the available width so
+            # automatic height can grow the circle rather than preserve its
+            # earlier letterboxing. Explicit heights never enter this path.
+            gutters = record.get("gutters", {})
+            preferred_width = max(preferred_width, cell["w"] - gutters.get("left", 0)
+                                  - gutters.get("right", 0))
         if columns is not False:
             gutter_w = cell["w"] - zone["w"]
             side_width = measured.get("left_legend_width", 0) + measured.get("right_legend_width", 0)

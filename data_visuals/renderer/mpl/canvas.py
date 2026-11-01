@@ -427,7 +427,7 @@ def _fit_cell_ticks(ax, zone, box, renderer, cfg, fs, key, width, height, paddin
 def _minimum_plot(sp, cfg, renderer):
     if sp["chart"] == "custom":
         return sp["_custom_panel"].min_size
-    if sp["chart"] in ("pie", "donut", "radar"):
+    if sp["chart"] in ("pie", "donut", "radar", "circular_bar"):
         return max(60.0, cfg.min_plot_width), max(60.0, cfg.min_plot_height)
     if not cfg.physical:
         return max(20.0, sp["font_sizes"]["tick"] * 2)
@@ -453,7 +453,7 @@ def _minimum_plot(sp, cfg, renderer):
 def _share_facet_axes(records, options):
     """Join ranges explicitly, retaining all panels' data when limits are automatic."""
     ordered = [records[key] for key in sorted(records)
-               if records[key]["subplot"]["chart"] not in ("custom", "pie", "donut", "radar")
+               if records[key]["subplot"]["chart"] not in ("custom", "pie", "donut", "radar", "circular_bar")
                and records[key]["axes"].name == "rectilinear"]
     if not ordered:
         return
@@ -698,8 +698,8 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
         validate_axis_options(sp["chart"], sp.get("options", {}))
     facet_options = d.get("facets", {})
     if (facet_options and (facet_options.get("sharex") or facet_options.get("sharey"))
-            and any(sp["chart"] in ("pie", "donut", "radar") for sp in subplots)):
-        raise ValueError("Pie, donut and radar facets cannot share Cartesian axes; set facets.sharex/sharey=False")
+            and any(sp["chart"] in ("pie", "donut", "radar", "circular_bar") for sp in subplots)):
+        raise ValueError("Round chart facets cannot share Cartesian axes; set facets.sharex/sharey=False")
     if facet_options:
         for sp in subplots:
             sp["font_sizes"] = {key: max(8.0, value) for key, value in sp["font_sizes"].items()}
@@ -782,7 +782,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
         initial = {"left": fs["axis_label"] * 1.5, "right": fs["tick"] * 0.8,
                    "top": fs["title"] * 1.6 if sp.get("title") else 2.0,
                    "bottom": fs["axis_label"] * 1.5}
-        if (custom and custom["panel"].axes == "off") or sp["chart"] in ("pie", "donut"):
+        if (custom and custom["panel"].axes == "off") or sp["chart"] in ("pie", "donut", "circular_bar"):
             initial.update(left=2.0, right=2.0, bottom=2.0)
         if facet:
             initial["right"] = 2.0
@@ -817,7 +817,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
         y_label = sp["data"].get("y", "")
         if isinstance(y_label, list):
             y_label = " / ".join(y_label)
-        cartesian = not custom and sp["chart"] not in ("pie", "donut", "radar")
+        cartesian = not custom and sp["chart"] not in ("pie", "donut", "radar", "circular_bar")
         if cartesian:
             ax.set_xlabel(labels.get("x", sp["data"].get("x", "")), labelpad=cfg.axis_title_padding)
             ax.set_ylabel(labels.get("y", y_label), labelpad=cfg.axis_title_padding)
@@ -834,7 +834,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
             # Cartesian grids. Keep angular metric names at publication size.
             ax.tick_params(axis="both", labelsize=max(8.0, fs["tick"]))
             ax.grid(True, color=cfg.axis_grid_color, alpha=max(.35, cfg.grid_opacity), linewidth=.5)
-        if (custom and custom["panel"].axes == "off") or sp["chart"] in ("pie", "donut"):
+        if (custom and custom["panel"].axes == "off") or sp["chart"] in ("pie", "donut", "circular_bar"):
             ax.set_axis_off()
             ax.grid(False)
         for extra in secondary:
@@ -938,7 +938,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
                     error.required_width = record["box"]["w"] + max(0, (error.required_width or zone["w"]) - zone["w"])
                     error.required_height = record["box"]["h"] + max(0, (error.required_height or zone["h"]) - zone["h"])
                     raise _canvas_error(error, record["box"], key, width, height, padding, hint_header, hint_side) from None
-            elif record["subplot"]["chart"] in ("pie", "donut", "radar"):
+            elif record["subplot"]["chart"] in ("pie", "donut", "radar", "circular_bar"):
                 allocation = zone
                 zone = position_axes(record["axes"], zone, width, height)
                 min_w, min_h = record["minimum"]
@@ -953,6 +953,11 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
                 record["axes"].set_position(_frac_box(zone, width, height))
             record["zone"] = zone
             rect = _frac_box(zone, width, height)
+            layout_callback = getattr(record["axes"], "_figcompose_layout_callback", None)
+            if layout_callback is not None:
+                # Native annotations share the final physical viewport just as
+                # custom panels do. Reposition existing artists only.
+                layout_callback()
             _fit_cell_ticks(record["axes"], zone, record["box"], renderer, cfg, fs,
                             key, width, height, padding, hint_header, hint_side)
             # Titles and legends belong to the cell, so asymmetric y-axis
@@ -970,7 +975,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
                 cb = {"x": zone["x"] + zone["w"] + fs["tick"] * 0.6, "y": zone["y"],
                       "w": fs["tick"] * 0.7, "h": zone["h"]}
                 extra.set_position(_frac_box(cb, width, height))
-            if record["custom"] or record["subplot"]["chart"] == "radar":
+            if record["custom"] or record["subplot"]["chart"] in ("radar", "circular_bar"):
                 place_custom_title(record, renderer, cfg, height)
             record["local_artists"] = _place_local_legend(record, renderer, width, height)
         fig.canvas.draw()

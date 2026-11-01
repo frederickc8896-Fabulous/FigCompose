@@ -5,7 +5,8 @@ from __future__ import annotations
 import numpy as np
 from matplotlib.patches import Patch
 
-from .helpers import _luminance, frame, ordered, series_color
+from .helpers import frame, ordered, series_color
+from data_visuals.renderer.mpl.presentation import best_text_color
 
 
 def _draw_pie(ax, sp, cfg, color_map):
@@ -64,11 +65,7 @@ def _draw_pie(ax, sp, cfg, color_map):
     ax.set_axis_off()
     if percentage_texts:
         for color, text in zip(colors, percentage_texts):
-            background = _luminance(color)
-            def contrast(foreground):
-                luminance = _luminance(foreground)
-                return (max(luminance, background) + 0.05) / (min(luminance, background) + 0.05)
-            text.set_color(max((cfg.text_color, cfg.background), key=contrast))
+            text.set_color(best_text_color(color, (cfg.text_color, cfg.background)))
         # Percentages retain the declared physical font size. Their measured
         # widths and normalized locations provide a minimum square viewport;
         # the canvas can grow automatic height or reject an undersized fixed

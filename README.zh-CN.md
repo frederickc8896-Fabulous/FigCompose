@@ -20,7 +20,7 @@ FigCompose 以整张 Figure 为单位，统一管理物理尺寸、字号、分�
 - **统一物理版式**：mm / in 画布、固定 pt 字号、共享图例与实测留白，导出 PDF / SVG / PNG。
 - **整篇论文复用**：配置统一保存字体、13 套精选配色、字段显示和系列身份；不同 CSV 缺少某个模型时，其余模型保持原有颜色与点形。
 - **实测检查与对比**：定位文字越界、刻度碰撞和字号问题，保存布局快照，核对后续修改。
-- **Matplotlib 原生扩展**：内置 10 类统计图，可混排自定义结构图、极坐标图和三维图。
+- **Matplotlib 原生扩展**：当前仓库源码内置 11 类统计图，可混排自定义结构图、极坐标图和三维图。
 
 当前为 Alpha，接口仍在迭代。项目和分发包统一命名为 **FigCompose**；Python 导入路径仍为 `data_visuals`，保持兼容。
 
@@ -184,9 +184,42 @@ restored = FigureConfig.load("paper.yaml")
 | 混淆矩阵 | `confusion` | `x`, `y`, 可选 `metric` | 计数或汇总给定数量，支持行归一化 |
 | 饼图 / 环形图 | `pie` / `donut` | `group`, 可选 `metric` | 按类别求和；省略份额列时计数 |
 | 雷达图 | `radar` | `x`, `metric`, 可选 `group` | 重复观测取均值，至少三个完整指标轴 |
+| 同心环条形图 | `circular_bar` | `x` 对象 ID、`group` 指标、`metric` 分数 | 各指标使用独立量尺；精确圆头、同径对象对齐，可选分组均值 |
 
 `metric` 对普通图和雷达图表示 Y 值，对直方图表示分布值，对矩阵图和饼图表示数量或颜色值。
 饼图要求份额有限、非负且总和为正。雷达图使用长表，不自动归一化或补齐缺失指标。
+
+### 无需绘制回调的同心环条图
+
+`circular_bar` 是仓库源码中的新功能，**PyPI 0.1.1 尚未包含**，以下示例需使用源码安装。
+每个对象在所有扇区中占据同一条半径，填充角度表示独立量尺上的分数，表示的不是总和中的份额。
+默认纯白底，与其他图种共用字体、精选色系和系列身份。
+
+```python
+import pandas as pd
+from data_visuals import plot
+
+data = pd.DataFrame({
+    "participant": ["P01", "P02", "P03"] * 4,
+    "subject": ["Math"] * 3 + ["English"] * 3 + ["Physics"] * 3 + ["Geography"] * 3,
+    "score": [84, 76, 91, 65, 83, 72, 58, 79, 68, 88, 62, 75],
+})
+fig = plot(
+    data,  # 或包含这些列的长表 CSV
+    x="participant", group="subject",
+    plots=[{"kind": "circular_bar", "metric": "score", "summary": "mean", "title": None}],
+    canvas={"width": 180}, style="modern", palette="curated-7-warm",
+    title="Four subjects, three participant profiles",
+)
+fig.render("circular_scores.pdf")
+fig.render("circular_scores.png", dpi=300)
+```
+
+- `value_range=(0, 100)` 声明分数量尺；比例数据可设为 `(0, 1)`，不会猜测单位或静默改值。
+- 每个对象与指标的组合都应存在。缺失组合会报错；重复组合需显式指定 `aggregate="mean"`、`"median"` 或 `"sum"`。
+- `summary="mean"` 请求按对象分数计算不加权均值，统计量先计算再呈现；默认不添加均值。
+- `center="count"` 显示独立对象数量，`center=None` 隐藏；`order` 控制环的顺序，`rounded=False` 使用平端。
+- 原色序与已登记的系列身份跨图保持一致。小图可减少对象标签密度，但保留全部分数与原有物理字号。
 
 全图 `legend` 可设置共享或局部图例、位置、列数、字号、边框、顺序和显示名；
 子图通过 `chart_opts={"legend": {...}}` 覆盖，`legend=False` 隐藏图例。
@@ -299,7 +332,7 @@ FigCompose 负责可复用的样式与整图排版。数据列、统计口径、
 自定义结构图的内部节点与连线也由绘制函数安排。
 
 仓库包含绘图库源码、主题、安装配置、中英文 README 及其展示素材；本地演示、输出、测试、详细文档和实验数据均已忽略。
-上面的示例自带数据，安装 FigCompose 后即可运行。重新生成 README 图片：`python assets/readme/generate.py`。
+上面的示例自带数据；环条图示例需要仓库源码，其余示例也可使用已发布包运行。重新生成 README 图片：`python assets/readme/generate.py`。
 
 ## 许可证
 
