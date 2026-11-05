@@ -10,50 +10,41 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/FigCompose.svg)](https://pypi.org/project/FigCompose/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/LICENSE)
 
-Compose publication figures with Matplotlib.
+**选好数据和图种，把论文 Figure 的排版交给 FigCompose。**
 
-指定 CSV、指标、子图类型和风格，生成排版与配色统一的论文 Figure。
-FigCompose 以整张 Figure 为单位，统一管理物理尺寸、字号、分类颜色、共享图例与留白，
-减少组合不同图种时反复调整样式与间距的工作。
+![FigCompose 横三列、纵五行的十五面板组图，覆盖十一种内置图表，使用统一字体与粉蓝色系](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/hero_gallery.png)
 
-- **少量声明生成整图**：CSV 或 DataFrame 输入，选择指标、图种和风格，自动安排单图或多子图。
-- **统一物理版式**：mm / in 画布、固定 pt 字号、共享图例与实测留白，导出 PDF / SVG / PNG。
-- **整篇论文复用**：配置统一保存字体、13 套精选配色、字段显示和系列身份；不同 CSV 缺少某个模型时，其余模型保持原有颜色与点形。
-- **实测检查与对比**：定位文字越界、刻度碰撞和字号问题，保存布局快照，核对后续修改。
-- **Matplotlib 原生扩展**：当前仓库源码内置 11 类统计图，可混排自定义结构图、极坐标图和三维图。
+**11 种内置图表，15 个子图，一套统一配置。** 使用当前 FigCompose 源码直接生成，数据为模拟数据。
+[查看 SVG](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/hero_gallery.svg) · [复现这张组图](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/hero.py)
 
-当前为 Alpha，接口仍在迭代。项目和分发包统一命名为 **FigCompose**；Python 导入路径仍为 `data_visuals`，保持兼容。
+输入 CSV 或 DataFrame，选择指标、子图类型和风格，统一整张图的字号、配色、图例与间距。
+实验结果更新后，继续复用已经设定好的视觉规则，减少反复微调。
 
-[快速开始](#快速开始) · [论文配置](#整篇论文复用一份配置) · [图种](#图种与统计口径) · [出图检查](#出图检查与布局快照) · [自定义面板](#自定义-matplotlib-面板) · [配色色卡](#配色色卡)
+- **少调参数，少做重复工作**：自动安排常用图表与装饰间距，减少逐张设置字号、图例和留白的工作。
+- **内置精选色卡**：当前源码提供 13 套分类配色及 5 套连续色阶，包含暖色、冷色与混合风格。
+- **整篇论文颜色统一**：登记系列后，跨 CSV 保持同一模型的颜色、点形和线型；缺少某个模型时，其余模型保持原有身份。
+- **不同图种，统一排版**：柱图、曲线、散点、热力图等组合成一张 Figure，共用字体、配色和共享图例。
+- **按论文尺寸出图**：指定 mm 或英寸宽度，自动计算高度；字号使用 pt，支持 PDF、SVG 和 PNG 导出。
+- **延续 Matplotlib 的能力**：自定义结构图、极坐标图和三维图也能接入同一排版框架；出图检查帮助发现越界和刻度碰撞。
 
-## 图表示例
-
-![FigCompose 常用论文图表：分组柱状图及标准差、折线图、散点图、箱线图、直方图、热力图、混淆矩阵、环形图和雷达图](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/traditional_charts.png)
-
-九个面板均通过 FigCompose 的声明式接口生成，共用字体、方法颜色与整图图例。
-数据为固定随机种子的合成示例；另支持饼图及下表中的图种变体。
-[查看矢量图](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/traditional_charts.svg) · [生成脚本](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/generate.py)
+[快速开始](#快速开始) · [支持图种](#支持哪些图) · [全文复用](#整篇论文复用一份配置) · [配色色卡](#配色色卡) · [详细用法](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/REFERENCE.md)
 
 ## 安装
 
-从 [PyPI](https://pypi.org/project/FigCompose/) 安装已发布版本，需要 Python 3.10+。
+需要 Python 3.10+：
 
 ```bash
 python -m pip install FigCompose
 ```
 
-分发包名为 `FigCompose`，导入方式仍为 `from data_visuals import plot`。
-升级已有的 PyPI 安装：
+包名为 **FigCompose**，Python 导入使用 `data_visuals`。
+当前 PyPI 版本为 **0.1.1**；源码新增的同心环条图和 `curated-8-rose-blue` 配色需通过源码安装使用。
+默认字体为 **Times New Roman**，由系统提供；缺少时回退其他衬线字体。
 
-```bash
-python -m pip install --upgrade FigCompose
-```
+<details>
+<summary>安装最新源码或更新已有安装</summary>
 
-需要固定当前版本以便复现环境时，可使用 `python -m pip install "FigCompose==0.1.1"`。
-
-### 源码开发
-
-从源码开发时，克隆仓库并进行可编辑安装：
+安装包含最新图种与配色的源码：
 
 ```bash
 git clone https://github.com/frederickc8896-Fabulous/FigCompose.git
@@ -61,20 +52,24 @@ cd FigCompose
 python -m pip install -e .
 ```
 
-已通过可编辑方式安装的旧 clone，在仓库根目录执行以下命令更新：
+更新已有的源码安装，在仓库目录执行：
 
 ```bash
 git pull --ff-only
 python -m pip install -e .
 ```
 
-默认字体为 **Times New Roman**，需由操作系统提供；缺少时回退其他衬线字体。
-跨设备精确复现版式需要一致的字体与依赖版本。当前通过 Python API 调用。
+更新 PyPI 安装：
+
+```bash
+python -m pip install --upgrade FigCompose
+```
+
+</details>
 
 ## 快速开始
 
-下面的示例可直接运行；使用自己的数据时，将 `data` 替换为带表头的 CSV 路径，
-例如 `"results.csv"`，再指定对应列名即可。
+下面的示例可以直接运行。使用自己的数据时，把 `data` 换成带表头的 CSV 路径，例如 `"results.csv"`，再指定对应列名。
 
 ```python
 import pandas as pd
@@ -105,234 +100,88 @@ fig.render("figure.pdf")
 fig.render("figure.png", dpi=300)
 ```
 
-- `plots` 每项对应一个子图；子图数量由列表长度决定，`cols=2` 可限制每行最多两个子图。
-- `x/group` 为全局默认列，子图可以覆盖；`group=None` 关闭该子图分组。
-- `canvas` 控制整张 Figure 的物理尺寸，默认宽 180 mm；只给宽度时测量后自动求高，也可指定 `unit="in"`。
-  `{"width": 180, "height": 110}` 固定整图尺寸，装不下时报告布局错误。
-- `style` 支持 `general`、`modern`；`palette` 独立选择配色。
-  `from data_visuals import list_color_presets` 可查询全部 13 套精选配色。
-- 导出支持 `.pdf`、`.svg`、`.png`。DPI 只改变 PNG 像素密度，不改变物理尺寸与版式。
-- CSV 读取参数通过 `csv_options` 传入，例如 `{"encoding": "utf-8-sig", "delimiter": ","}`。
+常用时只需关注：
 
-常用入口：`plot()` 声明内容，`FigureConfig` 复用论文设置，`fig.render()` 导出，`fig.check()` 检查。
-需要跨格布局、共享坐标面板或原生绘制函数时，使用 `data_visuals.core.Figure`。
+| 设置 | 你需要指定什么 |
+|---|---|
+| `data` | CSV 路径或 DataFrame |
+| `x` / `group` | 横轴列与分组列，例如数据集和模型 |
+| `plots` | 每项一个子图，选择图种 `kind` 和指标 `metric` |
+| `canvas` | 整图宽度，默认单位 mm；省略高度时自动求高 |
+| `style` / `palette` | 视觉风格与色卡，例如 `modern` / `curated-5-warm` |
+
+需要时可用 `cols=2` 限制每行子图数。共享图例默认在主标题下方、子图上方，也可调整位置、列数和字号。
+比例数据的 `.0%` 将 0–1 显示为百分比；已经是 0–100 的数据用 `{x:.0f}%`。
+固定宽高时不会自动缩小字号；内容装不下会提示调整尺寸。
+
+### 用 AI 帮你写调用
+
+把列名、数据单位和想呈现的内容告诉 AI，就能让它围绕 FigCompose 的简洁接口生成代码。例如：
+
+> 请使用 FigCompose（`from data_visuals import plot`）读取 `results.csv`。列为 `dataset`、`model`、`accuracy`（0–1）和 `latency`（ms）。按模型分组，画准确率柱图与延迟折线图，每行两个子图。整图宽 180 mm、高度自动，使用 `modern` 风格和 `curated-5-warm` 配色，共享图例放在标题下方，导出 PDF 与 300 dpi PNG。
+
+需要更复杂的设置时，把[接口参考](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/REFERENCE.md)一起提供给 AI。
+
+## 支持哪些图
+
+| 图种 | `kind` | 常见用法 |
+|---|---|---|
+| 柱状图 | `bar` | 分组、水平柱、堆叠、百分比堆叠、误差线 |
+| 折线图 | `line` | 趋势、点标记、阶梯线、面积填充 |
+| 散点图 | `scatter` | 散点、气泡、预计算差值与区间 |
+| 箱线图 | `box` | 分组分布、水平箱线、异常值 |
+| 直方图 | `histogram` | 分布、密度曲线、累积分布 |
+| 热力图 | `heatmap` | 指标矩阵与数值标注 |
+| 混淆矩阵 | `confusion` | 计数、给定数量汇总、行归一化 |
+| 饼图 / 环形图 | `pie` / `donut` | 类别份额 |
+| 雷达图 | `radar` | 多指标轮廓比较 |
+| 同心环条图 | `circular_bar` | 多对象的独立指标评分，需源码安装 |
+
+有重复观测时，柱图、折线、雷达及热力图默认按对应分组取均值；饼图与环形图按类别求和，省略数值列时计数；散点图保留观测。
+环条图使用独立分数量尺，表示的不是总量中的份额；重复对象/指标组合需明确指定汇总方式。
+更多统计口径、数据格式及自定义 Matplotlib 面板示例见[接口参考](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/REFERENCE.md)。
 
 ## 整篇论文复用一份配置
 
-`FigureConfig` 可同时交给简洁入口 `plot(..., config=paper)` 和高级入口 `Figure(config=paper)`。
-字体、色系、画布、图例、字段显示和系列身份只声明一次；单张图仍能覆盖默认值。
+将字体、色卡、指标显示名和模型身份保存下来，后续每张图使用同一份 `paper.yaml`。
+下面接着使用快速开始中的 `data`，完整数据与缺少基线的数据保持相同的模型颜色和点形：
 
 ```python
-import pandas as pd
 from data_visuals import FigureConfig, plot
 
 paper = FigureConfig(
-    canvas={"width": 180},  # 默认 mm；高度按内容求解
-    theme="modern", palette="curated-5-warm",
+    canvas={"width": 180}, theme="modern", palette="curated-5-warm",
     font_family="Times New Roman",
-    legend={"scope": "shared", "ncols": 3},
-    fields={
-        "epoch": {"label": "Training epoch", "format": ".0f"},
-        "f1": {"label": "F1 score", "unit": "%", "format": ".0%"},
-    },
+    legend={"scope": "shared", "ncols": 2},
+    fields={"accuracy": {"label": "Accuracy", "unit": "%", "format": ".0%"}},
     series={"model": [
-        {"id": "base", "label": "Baseline", "marker": "o", "linestyle": "--"},
-        {"id": "large", "label": "Large model", "marker": "s", "linestyle": "-."},
-        {"id": "ours", "label": "Our method", "marker": "D", "linestyle": "-"},
+        {"id": "Base", "label": "Baseline", "marker": "o", "linestyle": "--"},
+        {"id": "Ours", "label": "Our method", "marker": "D", "linestyle": "-"},
     ]},
 )
+paper.save("paper.yaml")
 
-data = pd.DataFrame({
-    "epoch": [1, 2, 1, 2, 1, 2],
-    "model": ["base", "base", "large", "large", "ours", "ours"],
-    "f1": [0.70, 0.76, 0.78, 0.83, 0.82, 0.89],
-})
-for name, frame in [("all", data), ("subset", data[data.model != "base"])]:
-    plot(frame, config=paper, x="epoch", group="model",
-         plots=[{"kind": "line", "metric": "f1",
-                 "chart_opts": {"xticks": [1, 2]}}],
-         title="Training comparison").render(f"{name}.pdf")
+for name, frame in [("all", data), ("subset", data[data.model != "Base"])]:
+    plot(frame, config=paper, x="dataset", group="model",
+         plots=[{"kind": "line", "metric": "accuracy"}],
+         title="Model comparison").render(f"{name}.pdf")
 
-paper.save("paper.yaml")  # 也支持 .yml / .json
-restored = FigureConfig.load("paper.yaml")
+# 后续脚本加载：paper = FigureConfig.load("paper.yaml")
 ```
 
-- **字段元信息**：`fields` 使用原始列名索引。`label` 用于轴标题和自动子标题，`unit` 附在轴标题后，`format` 控制数字显示。CSV 列名与数值保持原样。
-  `".0%"` 把 0–1 显示为百分比；`"{x:.0f}%"` 给已经是 0–100 的值加百分号。单位本身不触发缩放。
-  矩阵的数值格式也用于色条与注释；局部 `fmt` 只覆盖矩阵注释。归一化混淆矩阵和百分比堆叠不会继承原始数值单位。
-- **系列身份**：`series` 以 `group` 列名索引，按列表顺序分配原色系的颜色；可选 `color` 固定色号。
-  曲线、散点和雷达复用 `marker`，曲线与雷达复用 `linestyle`。不同 CSV 缺少某个系列时，保留其颜色位置，图例只显示实际出现的系列。
-  色板容量按完整登记集合计算，缺席系列也保留位置。
-  请登记该列的完整系列集合；使用该分组列时，未登记的 ID、空值和布尔 ID 会报错。原始 ID 与显示名分别保存，不根据 `ours` 等名称自动赋予样式。
-- **覆盖优先级**：默认主题 → 论文配置 → 单图调用 → 子图 `chart_opts`；既有 `category_colors` 覆盖登记的颜色，子图 `series_styles` 可继续覆盖。
-  图例仍可自由调整位置、列数、顺序与文字；`legend.order/labels` 可以使用原始系列 ID。
-- **配置文件**：JSON / YAML 都可校验后加载，未知字段会报错。数值型字典键请用 YAML 保存；JSON 会拒绝可能改变键类型的配置。
-
-单份配置可以描述比当前 CSV 更多的字段和系列。当前图没有使用的列不会参与计算；同一坐标轴上的多个指标若声明了冲突的单位或格式，需要明确覆盖或分轴。
-`plot()` 使用 `style` 选择风格，配置文件中的对应字段为 `FigureConfig.theme`。
-
-## 图种与统计口径
-
-| 图种 | `kind` | 主要字段 | 默认行为与变体 |
-|---|---|---|---|
-| 柱状图 | `bar` | `x`, `metric`, 可选 `group/error` | 按组取均值；支持误差线、水平柱、堆叠与百分比堆叠 |
-| 折线图 | `line` | `x`, `metric`, 可选 `group` | 重复 X 观测取均值；支持点标记、阶梯线与面积填充 |
-| 散点图 | `scatter` | `x`, `metric`, 可选 `group/size` | 保留观测；支持气泡大小与预计算区间 |
-| 箱线图 | `box` | `x`, `metric`, 可选 `group` | 按组展示分布；支持水平箱线与异常值点 |
-| 直方图 | `histogram` | `metric`, 可选 `group` | 支持分箱、密度曲线与累积分布 |
-| 热力图 | `heatmap` | `x`, `y`, `metric` | 按两维分组取均值，支持数值标注 |
-| 混淆矩阵 | `confusion` | `x`, `y`, 可选 `metric` | 计数或汇总给定数量，支持行归一化 |
-| 饼图 / 环形图 | `pie` / `donut` | `group`, 可选 `metric` | 按类别求和；省略份额列时计数 |
-| 雷达图 | `radar` | `x`, `metric`, 可选 `group` | 重复观测取均值，至少三个完整指标轴 |
-| 同心环条形图 | `circular_bar` | `x` 对象 ID、`group` 指标、`metric` 分数 | 各指标使用独立量尺；精确圆头、同径对象对齐，可选分组均值 |
-
-`metric` 对普通图和雷达图表示 Y 值，对直方图表示分布值，对矩阵图和饼图表示数量或颜色值。
-饼图要求份额有限、非负且总和为正。雷达图使用长表，不自动归一化或补齐缺失指标。
-
-### 无需绘制回调的同心环条图
-
-`circular_bar` 是仓库源码中的新功能，**PyPI 0.1.1 尚未包含**，以下示例需使用源码安装。
-每个对象在所有扇区中占据同一条半径，填充角度表示独立量尺上的分数，表示的不是总和中的份额。
-默认纯白底，与其他图种共用字体、精选色系和系列身份。
+需要检查成图时，可在快速开始的 `fig` 上运行：
 
 ```python
-import pandas as pd
-from data_visuals import plot
-
-data = pd.DataFrame({
-    "participant": ["P01", "P02", "P03"] * 4,
-    "subject": ["Math"] * 3 + ["English"] * 3 + ["Physics"] * 3 + ["Geography"] * 3,
-    "score": [84, 76, 91, 65, 83, 72, 58, 79, 68, 88, 62, 75],
-})
-fig = plot(
-    data,  # 或包含这些列的长表 CSV
-    x="participant", group="subject",
-    plots=[{"kind": "circular_bar", "metric": "score", "summary": "mean", "title": None}],
-    canvas={"width": 180}, style="modern", palette="curated-7-warm",
-    title="Four subjects, three participant profiles",
-)
-fig.render("circular_scores.pdf")
-fig.render("circular_scores.png", dpi=300)
-```
-
-- `value_range=(0, 100)` 声明分数量尺；比例数据可设为 `(0, 1)`，不会猜测单位或静默改值。
-- 每个对象与指标的组合都应存在。缺失组合会报错；重复组合需显式指定 `aggregate="mean"`、`"median"` 或 `"sum"`。
-- `summary="mean"` 请求按对象分数计算不加权均值，统计量先计算再呈现；默认不添加均值。
-- `center="count"` 显示独立对象数量，`center=None` 隐藏；`order` 控制环的顺序，`rounded=False` 使用平端。
-- 原色序与已登记的系列身份跨图保持一致。小图可减少对象标签密度，但保留全部分数与原有物理字号。
-
-全图 `legend` 可设置共享或局部图例、位置、列数、字号、边框、顺序和显示名；
-子图通过 `chart_opts={"legend": {...}}` 覆盖，`legend=False` 隐藏图例。
-共享图例默认居中放在主标题下方、子图上方；显式设置 `position="bottom"` 等可调整位置。
-例如 `legend={"scope": "shared", "position": "bottom", "ncols": 3, "fontsize": 8}`；
-`chart_opts={"legend": {"position": "upper right"}}` 可让某个子图使用局部图例。
-图例字号和 `gap` 等间距均以 pt 计。
-默认物理字号：主标题 11、子标题 9、轴标签 8、刻度 7、图例 8 pt，单图与多图保持一致。
-
-## 坐标轴与紧凑排版
-
-柱状、折线、散点、箱线和直方图共用 `chart_opts` 中的轴配置，显示名称可以独立于 CSV 列名：
-
-| 选项 | 示例与含义 |
-|---|---|
-| `xlabel` / `ylabel` | `"Accuracy (%)"`；空字符串隐藏轴标题 |
-| `xlim` / `ylim` | `[0, 100]`；固定范围，可使用倒序范围 |
-| `xticks` / `yticks` | `[0, 25, 50, 75, 100]`；固定刻度 |
-| `xticklabels` / `yticklabels` | 与对应刻度等长的显示文字 |
-| `xformat` / `yformat` | `".2f"` 保留两位小数；`".0%"` 将 0–1 显示为百分比；`"{x:.0f}%"` 为 0–100 数值添加百分号 |
-| `xscale` / `yscale` | `"linear"`、`"log"`、`"symlog"`；分类轴保留线性尺度 |
-
-热力图和混淆矩阵支持轴标题及刻度显示覆盖，保持分类矩阵范围；雷达图沿用径向 `ylim`。
-不适用或冲突的轴配置明确报错。水平柱图、水平箱线图的轴配置指屏幕上的 X/Y 轴。
-
-物理画布下，同类图保持绘图区对齐，混排时矩阵色条和圆形图外标签使用各自的留白；
-`FigureConfig.facets` 仍为比较图保留严格等大绘图区。
-布局实测后尝试回收多余留白，回收失败时恢复保守布局；自动高度综合考虑真实绘图区宽高。
-样式渲染隔离外部 Matplotlib 视觉设置，原生回调仍可显式调整自己的图元。
-比较型组图可设置 `FigureConfig(facets={"sharex": True, "sharey": True})`，配合完整矩形网格；
-改为 `False` 可让各面板独立定范围。显式 `xlim/ylim` 仍优先，共享轴上的冲突设置会报错。
-
-## 出图检查与布局快照
-
-`fig.check()` 实测最终文字、字体和绘图区，不调整数据、字号、坐标范围或画布。
-可生成独立检查图，定位文字越界、刻度重叠、字号过小等问题：
-
-```python
-from pathlib import Path
-import pandas as pd
-from data_visuals import plot
-
-fig = plot(
-    pd.DataFrame({"epoch": [1, 2, 3], "score": [0.70, 0.81, 0.87]}),
-    x="epoch", plots=[{"kind": "line", "metric": "score"}],
-    canvas={"width": 90}, title="Training progress",
-)
 report = fig.check(debug="layout_check.png")
 print(report.summary())
-report.raise_for_errors()  # 可选；include_warnings=True 也要求消除警告
-
-baseline = Path("layout_baseline.json")
-if baseline.exists():
-    comparison = report.compare(baseline, tolerance=0.5)
-    print(comparison.summary())
-    comparison.save("layout_changes.json")
-    assert comparison.ok, comparison.summary()  # 可选：布局变化时停止后续步骤
-else:
-    report.save(baseline)  # 首次建立基线；后续运行比较已有文件
 ```
 
-- `min_fontsize=7`、`min_tick_gap=1`、`tolerance=1` 均以 **pt** 衡量，可在 `check()` 中覆盖。
-  `report.ok` 表示没有错误；`report.errors`、`report.warnings` 可分别读取错误和警告。
-  越界为错误，小字号、刻度与装饰重叠等为警告，字体回退为信息提示。
-  若要求最小字号 8 pt，可用 `check(min_fontsize=8)` 检查；默认 7 pt 刻度会被列为警告。
-- 报告含实际画布、各子图绘图区、文字边界、实际字体和颜色；调试图用蓝色虚线标记单元、绿色标记绘图区，橙色/红色框定位问题。支持 PNG / SVG / PDF，正式导出不带叠层。
-- `.compare()` 按已记录的物理位置、文字、字体和实际图元样式检查布局变化，默认允许 **0.5 pt 几何误差**；字号与颜色严格比较。DPI 不参与比较。这是布局快照，不是像素截图比较。
-- 已用 `mpl_fig = fig.render()` 做原生 Matplotlib 调整时，可用 `from data_visuals import check_figure`，再调用 `check_figure(mpl_fig)` 检查当前结果，最后由调用者执行 `plt.close(mpl_fig)`。`fig.check()` 自行管理检查所需的临时 Figure。
+检查图会标出文字越界、刻度碰撞和小字号等问题，正式导出不带这些标记。检查与布局快照帮助核对版式；图种、统计口径和科学表达仍由研究者决定。
 
-基线文件应保留并在审阅后明确更新。需要让回归检查阻止后续步骤时，可检查 `comparison.ok`；
-`FigureReport.load("layout_baseline.json")` 也能读取历史报告。
+## 更多用法
 
-绘图区面积占比是矩形分配指标，不代表空白率或审美评分。检查不判断统计结论、数据图元重叠，
-也不保证结构图内部节点、连线或投影三维文字没有碰撞；具体覆盖限制写入报告。
-固定画布本身无法容纳内容时，仍抛出带尺寸提示的 `LayoutError`。
-
-## 自定义 Matplotlib 面板
-
-高级入口 `data_visuals.core.Figure` 支持跨格布局、宽高权重与原生绘制函数。
-纯自定义 Figure 不需要 CSV 或占位 DataFrame：
-
-```python
-from data_visuals.core import Figure, PanelResult
-
-def draw_module(ax, ctx):
-    text = ax.text(
-        0.5, 0.5, "Encoder", ha="center", va="center",
-        bbox={"boxstyle": "round,pad=0.6", "facecolor": ctx.background},
-        **ctx.text_kwargs(),
-    )
-    return PanelResult(artists=[text])
-
-paper = Figure(rows=1, cols=1, canvas={"width": 90}, legend=False)
-paper[0, 0].custom(draw_module, min_size=(120, 70), preferred_aspect=2)
-paper.render("model.svg")
-```
-
-`.custom()` 接受 `projection="polar"`、`"3d"` 或已注册的 Matplotlib 投影名，
-`axes_options` 传入原生轴构造参数。需要显示坐标轴时指定 `axes="on"`。
-`min_size` 使用 pt；`box_aspect` 表示面板绘图区的宽/高。
-
-通过 `ctx.text_kwargs()`、`ctx.color()` 使用统一样式；通过 `PanelResult` 返回测量对象、
-图例句柄或 `layout(ax, ctx)` 尺寸更新函数。框架管理整图，回调负责内部节点与连线。
-自动尺寸试绘和正式导出会重新执行回调，回调应可重复构建且不产生外部副作用。
-自定义回调属于运行时对象，含回调的 Spec 不能序列化为 JSON。
-
-## 项目范围
-
-FigCompose 负责可复用的样式与整图排版。数据列、统计口径、坐标范围与图的科学表达由调用者确定；
-自定义结构图的内部节点与连线也由绘制函数安排。
-
-仓库包含绘图库源码、主题、安装配置、中英文 README 及其展示素材；本地演示、输出、测试、详细文档和实验数据均已忽略。
-上面的示例自带数据；环条图示例需要仓库源码，其余示例也可使用已发布包运行。重新生成 README 图片：`python assets/readme/generate.py`。
+[接口参考](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/REFERENCE.md)集中说明坐标轴、图例、全文配置、环条图、自定义 Matplotlib 面板和布局快照，便于进阶使用或交给 AI 查阅。
+FigCompose 当前为 Alpha，接口仍在迭代。
 
 ## 许可证
 
@@ -342,32 +191,19 @@ FigCompose 采用 [Apache License 2.0](https://github.com/frederickc8896-Fabulou
 
 ### 分类色与整图预设
 
-以下 **13 套**预设直接引用 `data_visuals/utils/colors.py` 中的精选搭配，色号与顺序保持不变。
-在 `plot()` 中传入完整名称，例如 `palette="curated-5-warm"`；`style` 独立控制字体与排版。
-名称中的 2 / 5 / 7 / 8 / 10 表示类别容量：类别较少时取前几色，超出容量时需选择更大的预设。
-`cool`、`warm` 等名称沿用原配置，实际冷暖分布请以色卡为准。
+当前源码提供 **13 套**精选配色，保留原始色号与顺序。传入完整名称即可使用，例如 `palette="curated-5-warm"`。
+名称中的 2 / 5 / 7 / 8 / 10 表示类别容量，超出时选择更大的预设。色卡边框标出各组主色。
 
-新增八色预设 `palette="curated-8-rose-blue"`，由浅粉、淡紫过渡到深蓝。
-主色为第三位的 **`#D79AB7`**。类别仍按原始色号顺序分配，不会自动将主色绑定到名为 `ours` 或其他名称的系列。
-色卡以细边框标出各组存储的主色。
-该新预设目前在仓库源码中可用，PyPI 0.1.1 尚未包含。
+粉蓝八色 `curated-8-rose-blue` 的主色为 **`#D79AB7`**，需源码安装；PyPI 0.1.1 提供其余 12 套。
 
 ![FigCompose 全部 13 套精选分类色卡，标注预设名、十六进制色号和主色边框](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_presets.png)
 
-[查看矢量色卡](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_presets.svg)。可通过 `list_color_presets()` 查询所有名称：
-
-```python
-from data_visuals import list_color_presets
-
-print(list_color_presets())
-```
+[查看 SVG 色卡](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_presets.svg) · 用 `from data_visuals import list_color_presets; print(list_color_presets())` 查询名称。
 
 ### 连续色阶
 
-热力图和混淆矩阵默认使用整图预设配套的连续色阶，也可在子图中显式设置，
-例如 `chart_opts={"color_scheme": "blues"}`。
-下方展示全部 **5 套**原始色阶，渐变与原始色阶节点对应。
+热力图与混淆矩阵默认使用预设配套色阶；可用 `chart_opts={"color_scheme": "blues"}` 等单独选择以下 **5 套**色阶。
 
 ![FigCompose 连续色阶：warm-cool、coastal、blues、amber、rose，以及原始色号](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_schemes.png)
 
-[查看矢量色卡](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_schemes.svg)
+[查看 SVG 色卡](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/color_schemes.svg)
