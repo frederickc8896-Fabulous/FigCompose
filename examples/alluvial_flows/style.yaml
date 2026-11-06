@@ -1,0 +1,12 @@
+theme: modern
+palette: curated-5-default
+font_family: Times New Roman
+legend:
+  scope: shared
+  position: top
+  ncols: 3
+category_colors:
+  entry:
+    A: '#e63946'
+    B: '#94d2bd'
+    C: '#1d3557'

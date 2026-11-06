@@ -1,0 +1,47 @@
+dpi: 300
+theme: modern
+palette: curated-5-cool
+title: null
+legend_max_entries: 0
+legend_position: top-right
+legend:
+  scope: shared
+  position: top
+  ncols: 3
+  fontsize: 8.0
+  order:
+  - Dataset I
+  - Dataset II
+  - Dataset III
+font_family: Times New Roman
+background: '#ffffff'
+category_colors:
+  dataset:
+    Dataset I: '#ff6b35'
+    Dataset II: '#1976d2'
+    Dataset III: '#0d47a1'
+facets: {}
+fields:
+  mean_difference_pp:
+    label: 'Accuracy change: B - A'
+    unit: pp
+series:
+  dataset:
+  - id: Dataset I
+    label: Dataset I
+    color: '#ff6b35'
+    marker: o
+  - id: Dataset II
+    label: Dataset II
+    color: '#1976d2'
+    marker: o
+  - id: Dataset III
+    label: Dataset III
+    color: '#0d47a1'
+    marker: o
+auto_margins: true
+autosize: true
+canvas:
+  width: 160.0
+  height: 130.0
+  unit: mm

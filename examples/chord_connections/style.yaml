@@ -1,0 +1,13 @@
+theme: modern
+palette: curated-10-vibrant
+font_family: Times New Roman
+legend:
+  visible: false
+category_colors:
+  group:
+    Imaging: '#fb9017'
+    Clinical: '#fd9e02'
+    Genomics: '#ffb703'
+    Proteomics: '#126782'
+    Microbiome: '#58b4d1'
+    Metabolomics: '#8ecae6'

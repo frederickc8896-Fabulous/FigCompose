@@ -5,8 +5,8 @@
 This reference is for advanced use and for supplying precise API context to a coding assistant.
 Start with the README for installation and a first figure.
 The project is in Alpha; the Python import path is `data_visuals`.
-The repository source includes `circular_bar` and the `curated-8-rose-blue` palette;
-neither is included in PyPI 0.1.1.
+FigCompose 0.1.2 includes `circular_bar` and the `curated-8-rose-blue` palette.
+Upgrade older installations with `python -m pip install --upgrade FigCompose`.
 
 [Data and chart behavior](#data-and-chart-behavior) · [Paper configuration](#paper-configuration) · [Canvas and axes](#canvas-and-axes) · [Legends](#legends) · [Circular bars](#circular-bars) · [Figure checks](#figure-checks-and-layout-snapshots) · [Custom panels](#custom-matplotlib-panels)
 
@@ -139,7 +139,7 @@ in [the legend configuration](data_visuals/core/legend.py).
 
 ## Circular bars
 
-**Requires the repository source; PyPI 0.1.1 does not include `circular_bar`.**
+**Available in FigCompose 0.1.2 and later.**
 Each object occupies the same ring in every sector. Filled angle encodes a score on an independent scale,
 rather than a share of a total. The chart uses the same white canvas, fonts, palettes and series identities as other charts.
 

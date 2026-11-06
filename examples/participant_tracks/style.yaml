@@ -1,0 +1,43 @@
+dpi: 300
+theme: modern
+palette: curated-10-muted
+title: null
+legend_max_entries: 0
+legend_position: top-right
+legend:
+  scope: shared
+  position: top
+  ncols: 3
+  order:
+  - Female
+  - Male
+  - Asian
+  - Black
+  - Caucasian
+  - Hispanic
+  - Sensitive
+  - Intermediate
+  - Resistant
+  fontsize: 8.0
+font_family: Times New Roman
+background: '#ffffff'
+category_colors:
+  metadata:
+    Female: '#D79AB7'
+    Male: '#5B7FAF'
+    Asian: '#D8D4EA'
+    Black: '#0F2855'
+    Caucasian: '#9CC6E6'
+    Hispanic: '#E8B3C6'
+    Sensitive: '#9CC6E6'
+    Intermediate: '#D8D4EA'
+    Resistant: '#D79AB7'
+facets: {}
+fields: {}
+series: {}
+auto_margins: true
+autosize: true
+canvas:
+  width: 180.0
+  height: null
+  unit: mm

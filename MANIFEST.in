@@ -3,6 +3,7 @@ include README.md
 include README.zh-CN.md
 include REFERENCE.md
 recursive-include data_visuals/themes *.json
+recursive-include examples *.py *.csv *.yaml *.yml *.json *.md *.png *.svg
 
 prune .agents
 prune .codex

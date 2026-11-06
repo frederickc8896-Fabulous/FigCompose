@@ -14,14 +14,14 @@
 
 ![FigCompose 横三列、纵五行的十五面板组图，覆盖十一种内置图表，使用统一字体与粉蓝色系](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/hero_gallery.png)
 
-**11 种内置图表，15 个子图，一套统一配置。** 使用当前 FigCompose 源码直接生成，数据为模拟数据。
+**11 种内置图表，15 个子图，一套统一配置。** 使用 FigCompose 0.1.2 直接生成，数据为模拟数据。
 [查看 SVG](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/hero_gallery.svg) · [复现这张组图](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/hero.py)
 
 输入 CSV 或 DataFrame，选择指标、子图类型和风格，统一整张图的字号、配色、图例与间距。
 实验结果更新后，继续复用已经设定好的视觉规则，减少反复微调。
 
 - **少调参数，少做重复工作**：自动安排常用图表与装饰间距，减少逐张设置字号、图例和留白的工作。
-- **内置精选色卡**：当前源码提供 13 套分类配色及 5 套连续色阶，包含暖色、冷色与混合风格。
+- **内置精选色卡**：13 套分类配色及 5 套连续色阶，包含暖色、冷色与混合风格。
 - **整篇论文颜色统一**：登记系列后，跨 CSV 保持同一模型的颜色、点形和线型；缺少某个模型时，其余模型保持原有身份。
 - **不同图种，统一排版**：柱图、曲线、散点、热力图等组合成一张 Figure，共用字体、配色和共享图例。
 - **按论文尺寸出图**：指定 mm 或英寸宽度，自动计算高度；字号使用 pt，支持 PDF、SVG 和 PNG 导出。
@@ -38,7 +38,7 @@ python -m pip install FigCompose
 ```
 
 包名为 **FigCompose**，Python 导入使用 `data_visuals`。
-当前 PyPI 版本为 **0.1.1**；源码新增的同心环条图和 `curated-8-rose-blue` 配色需通过源码安装使用。
+**FigCompose 0.1.2** 已包含同心环条图和这里展示的全部 13 套配色。旧安装可用 `python -m pip install --upgrade FigCompose` 更新。
 默认字体为 **Times New Roman**，由系统提供；缺少时回退其他衬线字体。
 
 <details>
@@ -122,6 +122,19 @@ fig.render("figure.png", dpi=300)
 
 需要更复杂的设置时，把[接口参考](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/REFERENCE.md)一起提供给 AI。
 
+## 可直接复现的示例
+
+下载或克隆仓库，安装 FigCompose 0.1.2+，即可运行完整示例。每个目录包含实际 CSV、风格配置、脚本和预期成图。
+
+| 从这里开始 | 可以复现什么 |
+|---|---|
+| [四图组合](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/mixed_figure) | 两份 CSV，四类图表，缺席方法保持原有颜色与点形 |
+| [差值与区间](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/intervals) | 配对估计、置信区间与给定的非对称边界 |
+| [同心环条](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/circular_scores) | 原生环条图，40 个分数，各指标使用独立量尺 |
+
+例如运行 `python examples/circular_scores/generate.py --out output/circular`。
+[查看全部八个示例](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md)，另有环形多轨、环形聚类、二维三维对照、弦图和桑基流图的现成自定义模板。
+
 ## 支持哪些图
 
 | 图种 | `kind` | 常见用法 |
@@ -135,7 +148,7 @@ fig.render("figure.png", dpi=300)
 | 混淆矩阵 | `confusion` | 计数、给定数量汇总、行归一化 |
 | 饼图 / 环形图 | `pie` / `donut` | 类别份额 |
 | 雷达图 | `radar` | 多指标轮廓比较 |
-| 同心环条图 | `circular_bar` | 多对象的独立指标评分，需源码安装 |
+| 同心环条图 | `circular_bar` | 多对象的独立指标评分与分组均值 |
 
 有重复观测时，柱图、折线、雷达及热力图默认按对应分组取均值；饼图与环形图按类别求和，省略数值列时计数；散点图保留观测。
 环条图使用独立分数量尺，表示的不是总量中的份额；重复对象/指标组合需明确指定汇总方式。
@@ -191,10 +204,10 @@ FigCompose 采用 [Apache License 2.0](https://github.com/frederickc8896-Fabulou
 
 ### 分类色与整图预设
 
-当前源码提供 **13 套**精选配色，保留原始色号与顺序。传入完整名称即可使用，例如 `palette="curated-5-warm"`。
+FigCompose 提供 **13 套**精选配色，保留原始色号与顺序。传入完整名称即可使用，例如 `palette="curated-5-warm"`。
 名称中的 2 / 5 / 7 / 8 / 10 表示类别容量，超出时选择更大的预设。色卡边框标出各组主色。
 
-粉蓝八色 `curated-8-rose-blue` 的主色为 **`#D79AB7`**，需源码安装；PyPI 0.1.1 提供其余 12 套。
+粉蓝八色 `curated-8-rose-blue` 的主色为 **`#D79AB7`**，FigCompose 0.1.2 及之后版本均已包含。
 
 ![FigCompose 全部 13 套精选分类色卡，标注预设名、十六进制色号和主色边框](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_presets.png)
 

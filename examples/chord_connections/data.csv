@@ -1,0 +1,16 @@
+source,target,value
+Imaging,Clinical,36
+Imaging,Genomics,22
+Imaging,Proteomics,12
+Imaging,Microbiome,8
+Imaging,Metabolomics,10
+Genomics,Clinical,28
+Genomics,Proteomics,34
+Genomics,Microbiome,20
+Genomics,Metabolomics,18
+Clinical,Proteomics,16
+Clinical,Microbiome,14
+Clinical,Metabolomics,24
+Proteomics,Microbiome,10
+Proteomics,Metabolomics,30
+Microbiome,Metabolomics,26

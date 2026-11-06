@@ -3,7 +3,7 @@
 Run: python assets/readme/hero.py
 All inputs are explicit synthetic observations. No demo modules, custom drawing
 callbacks, manual axes placement or post-render artist adjustments are needed.
-Requires the repository source for circular_bar and curated-8-rose-blue.
+Requires FigCompose 0.1.2 or later for circular_bar and curated-8-rose-blue.
 """
 from __future__ import annotations
 

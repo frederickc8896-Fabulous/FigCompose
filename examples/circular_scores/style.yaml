@@ -1,0 +1,37 @@
+dpi: 300
+theme: modern
+palette: curated-7-warm
+title: null
+legend_max_entries: 0
+legend_position: top-right
+legend:
+  visible: false
+font_family: Times New Roman
+background: '#ffffff'
+category_colors: {}
+facets: {}
+fields:
+  participant:
+    label: Participants
+  subject:
+    label: Subjects
+series:
+  subject:
+  - id: Math
+    label: Math
+    color: '#eb5e28'
+  - id: English
+    label: English
+    color: '#f6b049'
+  - id: Physics
+    label: Physics
+    color: '#a1c349'
+  - id: Geography
+    label: Geography
+    color: '#6a8532'
+auto_margins: true
+autosize: true
+canvas:
+  width: 190.0
+  height: 200.0
+  unit: mm

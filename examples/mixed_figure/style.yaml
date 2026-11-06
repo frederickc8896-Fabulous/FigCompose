@@ -1,0 +1,55 @@
+dpi: 150
+theme: modern
+palette: curated-7-default
+title: null
+legend_max_entries: 0
+legend_position: top-right
+legend:
+  scope: shared
+  ncols: 3
+  fontsize: 8.0
+  order:
+  - Method A
+  - Method B
+  - Method C
+font_family: Times New Roman
+background: '#ffffff'
+category_colors: {}
+facets: {}
+fields:
+  quality:
+    label: Quality
+    unit: '%'
+    format: .0%
+  latency:
+    label: Latency
+    unit: ms
+    format: .0f
+  epoch:
+    label: Training epoch
+    format: .0f
+  task:
+    label: Evaluation task
+series:
+  method:
+  - id: Method A
+    label: Method A
+    color: '#d81159'
+    marker: o
+    linestyle: '-'
+  - id: Method B
+    label: Method B
+    color: '#e05400'
+    marker: s
+    linestyle: --
+  - id: Method C
+    label: Method C
+    color: '#4361ee'
+    marker: D
+    linestyle: -.
+auto_margins: true
+autosize: true
+canvas:
+  width: 210.0
+  height: 160.0
+  unit: mm

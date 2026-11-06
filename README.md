@@ -14,14 +14,14 @@
 
 ![FigCompose: 15 panels in a three-column, five-row figure, covering 11 built-in chart types with consistent typography and the rose-blue palette](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/hero_gallery.png)
 
-**11 built-in chart types, 15 panels, one consistent configuration.** Generated directly with the current FigCompose source using synthetic data.
+**11 built-in chart types, 15 panels, one consistent configuration.** Generated directly with FigCompose 0.1.2 using synthetic data.
 [View SVG](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/hero_gallery.svg) · [Reproduce this figure](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/assets/readme/hero.py)
 
 Start with a CSV or DataFrame, choose metrics, chart types and a style, and keep fonts, colors, legends and spacing consistent throughout the figure.
 When results change, reuse the same visual settings with less manual adjustment.
 
 - **Less tweaking, less repeated work**: arrange common charts and decoration spacing automatically, reducing repeated font, legend and margin adjustments.
-- **Built-in curated palettes**: the current source includes 13 categorical palettes and 5 continuous scales, with warm, cool and mixed color combinations.
+- **Built-in curated palettes**: 13 categorical palettes and 5 continuous scales, with warm, cool and mixed color combinations.
 - **Consistent colors across your paper**: register your series to retain each model's colors, markers and line styles across CSVs. When a model is absent, the others keep their identities.
 - **Different charts, one layout**: combine bars, lines, scatter plots, heatmaps and more in one figure with consistent fonts, colors and shared legends.
 - **Export at publication dimensions**: set the width in mm or inches and let height adapt to the content. Font sizes use pt; export to PDF, SVG or PNG.
@@ -38,7 +38,7 @@ python -m pip install FigCompose
 ```
 
 The package is named **FigCompose**; Python imports use `data_visuals`.
-The current PyPI release is **0.1.1**. The new concentric circular-bar chart and `curated-8-rose-blue` palette require a source installation.
+**FigCompose 0.1.2** includes the circular-bar chart and all 13 palettes shown here. Upgrade older installations with `python -m pip install --upgrade FigCompose`.
 The default font is **Times New Roman**, supplied by your system; other serif fonts are used as fallbacks.
 
 <details>
@@ -122,6 +122,19 @@ Give your AI assistant the column names, data units and what you want to show, a
 
 For more complex settings, give your assistant the [API reference](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/REFERENCE.md) as well.
 
+## Ready-to-run examples
+
+Download or clone the repository, install FigCompose 0.1.2+, and run a complete example. Each folder includes its actual CSV, saved style, code and expected image.
+
+| Start here | What you can reproduce |
+|---|---|
+| [Mixed figure](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/mixed_figure) | Four charts with stable method identities across two CSVs |
+| [Differences and intervals](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/intervals) | Paired estimates, confidence intervals and supplied asymmetric bounds |
+| [Concentric scores](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/circular_scores) | The native circular-bar chart, with 40 scores and independent scales |
+
+Run, for example, `python examples/circular_scores/generate.py --out output/circular`.
+[Browse all eight examples](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md), including ready-made custom templates for participant tracks, circular clustering, 2D/3D comparisons, chord diagrams and alluvial flows.
+
 ## Supported charts
 
 | Chart | `kind` | Common uses |
@@ -135,7 +148,7 @@ For more complex settings, give your assistant the [API reference](https://githu
 | Confusion matrix | `confusion` | Counts, supplied quantities and row normalization |
 | Pie / donut | `pie` / `donut` | Category shares |
 | Radar | `radar` | Comparing profiles across metrics |
-| Concentric circular bars | `circular_bar` | Independent metric scores for multiple objects; source installation required |
+| Concentric circular bars | `circular_bar` | Independent metric scores for multiple objects and group means |
 
 For repeated observations, bars, lines, radar plots and heatmaps default to means within their respective groups. Pie and donut charts sum values by category, or count rows when the value column is omitted; scatter plots retain observations.
 Circular bars use independent score scales rather than shares of a total. Repeated object/metric pairs require an explicit aggregation choice.
@@ -191,10 +204,10 @@ FigCompose is licensed under the [Apache License 2.0](https://github.com/frederi
 
 ### Categorical colors and figure presets
 
-The current source includes **13 curated palettes**, preserving their original hex values and order. Pass a full name, such as `palette="curated-5-warm"`.
+FigCompose includes **13 curated palettes**, preserving their original hex values and order. Pass a full name, such as `palette="curated-5-warm"`.
 The numbers 2 / 5 / 7 / 8 / 10 indicate category capacity; choose a larger preset if needed. Outlined swatches mark each palette's main color.
 
-The eight-color `curated-8-rose-blue` palette has **`#D79AB7`** as its main color and requires a source installation; PyPI 0.1.1 provides the other 12 palettes.
+The eight-color `curated-8-rose-blue` palette has **`#D79AB7`** as its main color and is included in FigCompose 0.1.2 and later.
 
 ![All 13 FigCompose curated categorical palettes, with preset names, hexadecimal colors and outlined main colors](https://raw.githubusercontent.com/frederickc8896-Fabulous/FigCompose/main/assets/readme/color_presets.png)
 

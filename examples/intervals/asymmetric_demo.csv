@@ -1,0 +1,16 @@
+dataset,condition,mean_difference_pp,ci95_lower_pp,ci95_upper_pp,interval_source
+Dataset I,1,-2.0,-2.74,-0.8,illustrative bounds; not inferred from paired.csv
+Dataset I,2,-0.7,-1.58,0.5,illustrative bounds; not inferred from paired.csv
+Dataset I,3,0.6,-0.42000000000000004,1.7999999999999998,illustrative bounds; not inferred from paired.csv
+Dataset I,4,1.9,0.7399999999999998,3.0999999999999996,illustrative bounds; not inferred from paired.csv
+Dataset I,5,3.1,1.8,4.3,illustrative bounds; not inferred from paired.csv
+Dataset II,1,-1.6,-2.34,-0.2200000000000002,illustrative bounds; not inferred from paired.csv
+Dataset II,2,-0.29999999999999993,-1.18,1.08,illustrative bounds; not inferred from paired.csv
+Dataset II,3,1.0,-0.020000000000000018,2.38,illustrative bounds; not inferred from paired.csv
+Dataset II,4,2.3,1.1399999999999997,3.6799999999999997,illustrative bounds; not inferred from paired.csv
+Dataset II,5,3.5,2.2,4.88,illustrative bounds; not inferred from paired.csv
+Dataset III,1,-1.2,-1.94,0.3600000000000001,illustrative bounds; not inferred from paired.csv
+Dataset III,2,0.10000000000000009,-0.7799999999999999,1.6600000000000001,illustrative bounds; not inferred from paired.csv
+Dataset III,3,1.4,0.3799999999999999,2.96,illustrative bounds; not inferred from paired.csv
+Dataset III,4,2.7,1.54,4.26,illustrative bounds; not inferred from paired.csv
+Dataset III,5,3.9000000000000004,2.6000000000000005,5.460000000000001,illustrative bounds; not inferred from paired.csv

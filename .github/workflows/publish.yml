@@ -96,15 +96,22 @@ jobs:
           import numpy as np
           import pandas as pd
           import data_visuals
-          from data_visuals import FigureConfig, plot
+          from data_visuals import FigureConfig, list_color_presets, plot
           from data_visuals.core import Figure, PanelResult
           from data_visuals.themes import load_theme
+          from data_visuals.utils.colors import get_color_preset, get_palette
 
           checkout = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
           installed = Path(data_visuals.__file__).resolve()
           assert not installed.is_relative_to(checkout), installed
           assert metadata.version("FigCompose") == os.environ["EXPECTED_VERSION"]
           assert data_visuals.__version__ == os.environ["EXPECTED_VERSION"]
+          assert "curated-8-rose-blue" in list_color_presets()
+          assert get_palette(8, "curated-8-rose-blue").colors == [
+              "#FCE7EC", "#E8B3C6", "#D79AB7", "#D8D4EA",
+              "#D4E4F2", "#9CC6E6", "#5B7FAF", "#0F2855",
+          ]
+          assert int(get_color_preset("curated-8-rose-blue")["primary_index"]) == 2
           for theme in ("general", "modern"):
               content = resources.files("data_visuals.themes").joinpath(f"{theme}.json")
               assert json.loads(content.read_text(encoding="utf-8"))["name"] == theme
@@ -183,7 +190,7 @@ jobs:
                   x="object", group="subject",
                   plots=[{"kind": "circular_bar", "metric": "score",
                           "summary": "mean", "title": None}],
-                  canvas={"width": 100}, style="modern", palette="curated-5-warm",
+                  canvas={"width": 100}, style="modern", palette="curated-8-rose-blue",
                   title="Independent circular scores",
               )
               circular.render(str(destination / "circular.pdf"))
@@ -207,6 +214,75 @@ jobs:
               print("Data-free custom panel:", custom_report.summary())
               custom_report.raise_for_errors()
           print(f"Installed package verified: {installed}")
+          PY
+
+      - name: Verify public examples outside the checkout
+        env:
+          MPLBACKEND: Agg
+        run: |
+          cd "$RUNNER_TEMP"
+          python -I - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import subprocess
+          import sys
+          import tempfile
+
+          import data_visuals
+
+          checkout = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
+          installed = Path(data_visuals.__file__).resolve()
+          assert not installed.is_relative_to(checkout), installed
+          assert "site-packages" in installed.parts, installed
+          examples = (
+              "mixed_figure", "intervals", "circular_scores", "participant_tracks",
+              "clustered_heatmap", "three_dimensional_views", "chord_connections",
+              "alluvial_flows",
+          )
+          # Probe inside each isolated child before and after executing its
+          # copied generate.py. Never add the checkout to Python's search path.
+          probe = """
+          import os
+          from pathlib import Path
+          import runpy
+          import sys
+          import data_visuals
+          checkout = Path(os.environ['GITHUB_WORKSPACE']).resolve()
+          installed = Path(data_visuals.__file__).resolve()
+          assert 'site-packages' in installed.parts, installed
+          assert not installed.is_relative_to(checkout), installed
+          assert not any(Path(item).resolve().is_relative_to(checkout) for item in sys.path if item)
+          script, destination = sys.argv[1:]
+          sys.argv = [script, '--out', destination]
+          runpy.run_path(script, run_name='__main__')
+          assert Path(data_visuals.__file__).resolve() == installed
+          assert not any(Path(item).resolve().is_relative_to(checkout) for item in sys.path if item)
+          """
+          # The literal's indentation follows the surrounding Python block.
+          import textwrap
+          probe = textwrap.dedent(probe)
+          with tempfile.TemporaryDirectory(prefix="figcompose-examples-") as directory:
+              destination = Path(directory)
+              copied = destination / "examples"
+              shutil.copytree(checkout / "examples", copied,
+                              ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+              assert not copied.is_relative_to(checkout)
+              completed = []
+              for name in examples:
+                  output = destination / "outputs" / name
+                  subprocess.run(
+                      [sys.executable, "-I", "-c", probe,
+                       str(copied / name / "generate.py"), str(output)],
+                      cwd=destination, check=True, timeout=180,
+                  )
+                  assert (output / "figure.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+                  assert "<svg" in (output / "figure.svg").read_text(encoding="utf-8")
+                  assert (output / "preview.png").is_file()
+                  completed.append(name)
+                  print(f"Public example verified: {name}", flush=True)
+              print(json.dumps({"installed": str(installed), "examples": completed}))
           PY
 
       - name: Store verified distributions
