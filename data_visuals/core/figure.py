@@ -33,6 +33,7 @@ from data_visuals.core.config import FigureConfig, get_default_config
 from data_visuals.core.canvas import normalize_canvas
 from data_visuals.core.legend import merge_legend, normalize_legend
 from data_visuals.core.identity import normalize_fields, normalize_series
+from data_visuals.core.typography import normalize_font_sizes
 from data_visuals.core.metadata import field_label, resolve_field_options
 from data_visuals.core.spec import FigureSpec, SubplotSpec
 from data_visuals.core.panel import CustomPanel
@@ -321,6 +322,7 @@ class Figure:
         self._legend = merge_legend(cfg.legend, legend)
         self._auto_margins = cfg.auto_margins if auto_margins is None else auto_margins
         self._font_family = cfg.font_family
+        self._font_sizes = normalize_font_sizes(cfg.font_sizes)
         self._background = cfg.background
         self._facets = deepcopy(cfg.facets)
         self._category_colors = {
@@ -1035,6 +1037,19 @@ class Figure:
             shared_group_column=shared_group_column,
             auto_margins=self._auto_margins,
         )
+        # Legacy layouts retain their historical sizes for roles that were
+        # not explicitly overridden. Physical layouts resolve the same roles
+        # again while measuring their final canvas below.
+        if "main_title" in self._font_sizes:
+            layout_spec["title"]["font_size"] = self._font_sizes["main_title"]
+        if "title" in self._font_sizes:
+            layout_spec["subtitle"]["font_size"] = self._font_sizes["title"]
+        for cell in layout_spec["cells"]:
+            cell.setdefault("font_sizes", {}).update(
+                {role: size for role, size in self._font_sizes.items() if role != "main_title"}
+            )
+        if "legend" in self._font_sizes:
+            layout_spec.setdefault("shared_legend", {})["font_size"] = self._font_sizes["legend"]
 
         # ── Step 4: 共享轴检测 ──
         chart_axes: List[Dict[str, Optional[str]]] = []
@@ -1203,6 +1218,7 @@ class Figure:
             theme=self._theme,
             palette=self._palette,
             font_family=self._font_family,
+            font_sizes=self._font_sizes,
             background=self._background,
             color_domains=color_domains,
             series_order=series_order,

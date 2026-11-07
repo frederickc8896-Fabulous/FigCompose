@@ -99,6 +99,13 @@ Default physical font sizes are 11 pt for the main title, 9 for panel titles, 8 
 7 for ticks and 8 for legends. Times New Roman is requested from the operating system;
 missing fonts fall back to other serif fonts. Precise cross-device reproduction requires matching fonts and dependencies.
 
+In the current source version, `FigureConfig(font_sizes={"main_title": 16})` overrides
+individual roles in pt; supported keys are `main_title`, `title` (panel title),
+`axis_label`, `tick` and `legend`. Unspecified roles retain their defaults, including
+the legacy sizing path. Save these settings in the same paper YAML/JSON profile.
+`legend.fontsize` and panel legend overrides take precedence over `font_sizes.legend`.
+Explicit sizes participate in layout measurement; they do not scale with the canvas or DPI.
+
 Bar, line, scatter, box and histogram share these `chart_opts`:
 
 | Option | Example or meaning |

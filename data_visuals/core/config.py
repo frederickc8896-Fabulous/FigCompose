@@ -22,6 +22,7 @@ from data_visuals.core.canvas import DEFAULT_CANVAS, normalize_canvas
 from data_visuals.core.facets import normalize_facets
 from data_visuals.core.legend import normalize_legend
 from data_visuals.core.identity import normalize_fields, normalize_series
+from data_visuals.core.typography import normalize_font_sizes
 
 
 _UNSET = object()
@@ -58,6 +59,7 @@ class FigureConfig:
 
     # ── 全局样式覆盖 ──
     font_family: Optional[str] = None  # None = use theme font
+    font_sizes: Dict[str, float] = field(default_factory=dict)  # explicit role sizes, pt
     background: str = "#ffffff"
     category_colors: Dict[str, Dict[str, str]] = field(default_factory=dict)
     facets: Dict[str, Any] = field(default_factory=dict)
@@ -73,6 +75,7 @@ class FigureConfig:
     def __post_init__(self) -> None:
         self.facets = normalize_facets(self.facets)
         self.legend = normalize_legend(self.legend)
+        self.font_sizes = normalize_font_sizes(self.font_sizes)
         self.fields = normalize_fields(self.fields)
         self.series = normalize_series(self.series)
         self.category_colors = deepcopy(self.category_colors)
@@ -120,6 +123,7 @@ class FigureConfig:
             "legend_position": self.legend_position,
             "legend": normalize_legend(self.legend),
             "font_family": self.font_family,
+            "font_sizes": normalize_font_sizes(self.font_sizes),
             "background": self.background,
             "category_colors": self.category_colors,
             "facets": normalize_facets(self.facets),

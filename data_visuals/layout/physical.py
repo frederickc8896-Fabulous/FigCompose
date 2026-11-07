@@ -35,6 +35,14 @@ def _preferred_aspect(panel):
     return {"scatter": 1.25, "box": 1.5}.get(panel.chart_type, 1.75)
 
 
+def _prefers_full_width(panel):
+    # A hard aspect is already satisfied by letterboxing the viewport. Its
+    # measured ratio alone cannot tell a useful large panel from a small one.
+    return (panel.chart_type == "circular_bar"
+            or (panel.custom_panel is not None
+                and panel.custom_panel.box_aspect is not None))
+
+
 def _axis_cuts(panels, count, start, extent, index, span):
     """Recover weighted topology edges from an advanced layout's geometry."""
     left, right = {}, {}
@@ -155,7 +163,7 @@ def _commit_measured_geometry(spec, measured):
 
 
 def _score(spec, measured):
-    aspects, undersized, round_fit, circular_fill = [], [], [], []
+    aspects, undersized, round_fit, width_fill = [], [], [], []
     for panel in spec.subplots:
         record = measured["cells"].get((panel.row, panel.col))
         if record is None:
@@ -175,17 +183,17 @@ def _score(spec, measured):
             # not its area: circular content cannot fill a wide final-row span.
             fit = min(zone["w"], zone["h"]) / min(cell["w"], cell["h"])
             round_fit.append(max(0, 1 - fit) ** 2)
-        if panel.chart_type == "circular_bar":
-            # Direct sector labels and a reading key need more vertical room
-            # than pie slices. Avoid rewarding a short canvas whose square
-            # viewport leaves much of its usable width empty.
+        if _prefers_full_width(panel):
+            # Aspect-fitted viewports can satisfy their ratio at any size.
+            # Avoid rewarding a short canvas that leaves their width unused.
             gutters = record.get("gutters", {})
             available_w = cell["w"] - gutters.get("left", 0) - gutters.get("right", 0)
-            circular_fill.append(max(0, 1 - zone["w"] / max(1, available_w)) ** 2)
+            weight = 8.0 if panel.custom_panel is not None else 3.0
+            width_fill.append(weight * max(0, 1 - zone["w"] / max(1, available_w)) ** 2)
     count = max(1, len(aspects))
     return (0.65 * sum(aspects) / count + 0.8 * sum(undersized) / count
             + 0.25 * sum(round_fit) / count
-            + 3.0 * sum(circular_fill) / count
+            + sum(width_fill) / count
             + (0.45 * spec.canvas["height"] / spec.canvas["width"] if spec.canvas["height_auto"] else 0))
 
 
@@ -235,9 +243,9 @@ def _comfortable_height(spec, measured, cfg, columns):
             continue
         cell, zone = record["cell"], record["data_zone"]
         preferred_width = zone["w"]
-        if panel.chart_type == "circular_bar":
+        if _prefers_full_width(panel):
             # zone is already aspect-fitted; recover the available width so
-            # automatic height can grow the circle rather than preserve its
+            # automatic height can grow the panel rather than preserve its
             # earlier letterboxing. Explicit heights never enter this path.
             gutters = record.get("gutters", {})
             preferred_width = max(preferred_width, cell["w"] - gutters.get("left", 0)
@@ -264,7 +272,7 @@ def resolve_canvas_spec(spec, canvas_request, *, auto_cols=False):
     from data_visuals.renderer.mpl.canvas import figure_to_matplotlib
     from data_visuals.renderer.mpl.config import MplConfig
 
-    cfg = MplConfig(spec.theme, palette=spec.palette, physical=True)
+    cfg = MplConfig(spec.theme, palette=spec.palette, physical=True, font_sizes=spec.font_sizes)
     active = [panel for panel in spec.subplots if panel.chart_type]
     if not active:
         raise LayoutError("At least one subplot is required for a physical canvas.")

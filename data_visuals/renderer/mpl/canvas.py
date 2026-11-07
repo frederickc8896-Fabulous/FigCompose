@@ -16,6 +16,7 @@ from matplotlib.lines import Line2D
 from matplotlib.transforms import Bbox
 
 from data_visuals.core.legend import normalize_legend
+from data_visuals.core.typography import normalize_font_sizes
 from data_visuals.layout.placement import LayoutError, align_gutters, cell_boxes, inset_box
 from data_visuals.renderer.mpl.config import MplConfig
 from data_visuals.renderer.mpl.styling import style_axis as _style_axis
@@ -354,11 +355,28 @@ def figure_to_matplotlib(spec) -> plt.Figure:
     raw = spec.to_dict(runtime=True) if isinstance(spec, FigureSpec) else (
         spec.to_dict() if hasattr(spec, "to_dict") else spec)
     d = deepcopy(raw)
+    # Honour the same explicit hierarchy for directly supplied FigureSpecs or
+    # serialized specs, in addition to figures built by the public API.
+    font_sizes = normalize_font_sizes(d.get("font_sizes"))
+    for role, info in (("main_title", "title"), ("title", "subtitle")):
+        if role in font_sizes:
+            d.setdefault(info, {})["font_size"] = font_sizes[role]
+    for sp in d["subplots"]:
+        sp.setdefault("font_sizes", {}).update(
+            {role: size for role, size in font_sizes.items() if role != "main_title"}
+        )
+        if "legend" in font_sizes:
+            sp["font_sizes"]["legend"] = (
+                normalize_legend(sp.get("options", {}).get("legend")).get("fontsize")
+                or normalize_legend(d.get("legend")).get("fontsize") or font_sizes["legend"]
+            )
+    if "legend" in font_sizes:
+        d.setdefault("shared_legend", {})["font_size"] = font_sizes["legend"]
     width, height = float(d["canvas"]["width"]), float(d["canvas"]["height"])
     if not all(math.isfinite(v) and v > 0 for v in (width, height)):
         raise ValueError("Canvas width and height must be finite and positive")
     cfg = MplConfig(d.get("theme", "general"), palette=d.get("palette"),
-                    physical=d["canvas"].get("physical") is True)
+                    physical=d["canvas"].get("physical") is True, font_sizes=font_sizes)
     if d.get("font_family"):
         cfg.font_requested = d["font_family"]
         cfg.font_family = cfg._resolve_font(d["font_family"])

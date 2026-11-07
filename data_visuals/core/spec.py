@@ -28,6 +28,7 @@ import pandas as pd
 
 from data_visuals.core.facets import normalize_facets
 from data_visuals.core.legend import normalize_legend
+from data_visuals.core.typography import normalize_font_sizes
 from data_visuals.core.panel import CustomPanel
 
 
@@ -184,6 +185,7 @@ class FigureSpec:
 
     # ── 字体族 ──
     font_family: Optional[str] = None  # None = use theme font; set explicitly to override
+    font_sizes: Dict[str, float] = field(default_factory=dict)  # explicit role overrides, pt
 
     # ── 背景色 ──
     background: str = "#ffffff"
@@ -214,6 +216,7 @@ class FigureSpec:
     def __post_init__(self) -> None:
         self.facets = normalize_facets(self.facets)
         self.legend = normalize_legend(self.legend)
+        self.font_sizes = normalize_font_sizes(self.font_sizes)
 
     @property
     def n_subplots(self) -> int:
@@ -242,6 +245,7 @@ class FigureSpec:
             "theme": self.theme,
             "palette": self.palette,
             "font_family": self.font_family,
+            "font_sizes": normalize_font_sizes(self.font_sizes),
             "background": self.background,
             "color_domains": self.color_domains,
             "series_order": self.series_order,

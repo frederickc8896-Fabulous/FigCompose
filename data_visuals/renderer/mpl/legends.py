@@ -1,9 +1,9 @@
 """Measured, relocatable legends in physical design points.
 
 Legend rows deliberately use separate Matplotlib legends. This keeps both the
-visible and artist label order row-major and lets automatic packing retain the
-established independently centered rows. An optional single surrounding frame
-belongs to the entire block, rather than putting a border around every row.
+visible and artist label order row-major. Explicit columns share widths across
+all rows, while automatic packing retains independently centered rows. An
+optional single surrounding frame belongs to the entire block.
 """
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ import math
 from numbers import Integral, Real
 
 from matplotlib.font_manager import FontProperties
+from matplotlib.offsetbox import VPacker
 from matplotlib.patches import FancyBboxPatch
 
 from data_visuals.layout.placement import LayoutError
@@ -24,6 +25,25 @@ _SPACING_DEFAULTS = {
     "handletextpad": 4.0,
     "borderpad": 3.0,
 }
+
+
+class _PointWidthColumn(VPacker):
+    """A native legend column with a minimum width in design points.
+
+    OffsetBox widths are display pixels, unlike its spacing parameters. Convert
+    on every draw so saving the same Figure at a different DPI keeps the table
+    aligned and does not change its physical spacing.
+    """
+
+    def __init__(self, column, width):
+        super().__init__(pad=column.pad, sep=column.sep, align="left",
+                         mode=column.mode, height=column.height,
+                         children=column.get_children())
+        self.width_points = width
+
+    def _get_bbox_and_child_offsets(self, renderer):
+        self.width = renderer.points_to_pixels(self.width_points)
+        return super()._get_bbox_and_child_offsets(renderer)
 
 
 def _positive_number(value, name, *, zero=False):
@@ -73,8 +93,9 @@ class MeasuredLegend:
     ``max_width``, ``max_height``, coordinates, and spacing options are points
     (1/72 inch), independent of the figure's DPI. ``ncols=None`` packs measured
     rows automatically; an explicit positive integer fixes the number of
-    entries in each row, with only the final row allowed to be shorter. Labels
-    can wrap but columns and font size are never silently reduced.
+    entries in each row, with shared column widths and only the final row
+    allowed to be shorter. Labels can wrap but columns and font size are never
+    silently reduced.
 
     ``order`` and ``labels`` mappings are intentionally handled by the caller,
     where original category keys remain available. ``gap`` is likewise an
@@ -219,6 +240,96 @@ class MeasuredLegend:
             start = end
         return result
 
+    def _tabulated_rows(self, width, ncols):
+        """Fit the entire explicit table before aligning its shared columns.
+
+        Fitting each row independently can put its second marker underneath the
+        first row's text. Allocate the widest label in each column once, then
+        wrap labels against that common allocation. Native row artists and
+        row-major traversal remain unchanged.
+        """
+        chunks = [(self.handles[i:i + ncols], self.labels[i:i + ncols])
+                  for i in range(0, len(self.handles), ncols)]
+        rows = [self._measure(handles, labels) for handles, labels in chunks]
+        renderer = self.fig.canvas.get_renderer()
+        scale = 72.0 / self.fig.dpi
+        prop = FontProperties(family=self.cfg.font_family, size=self.fontsize)
+
+        def measure(text):
+            key = self.fig.dpi, text
+            if key not in self._text_widths:
+                self._text_widths[key] = renderer.get_text_width_height_descent(text, prop, False)[0]
+            return self._text_widths[key]
+
+        # Matplotlib packs legend entries in VPacker columns. Each row has one
+        # entry per native column, allowing fixed widths without changing any
+        # legend handler or its marker/text artist association.
+        def columns(legend):
+            return legend._legend_handle_box.get_children()
+
+        natural = [max(row[0].get_texts()[j].get_window_extent(renderer).width * scale
+                       for row in rows if j < len(row[0].get_texts()))
+                   for j in range(ncols)]
+        overhead = [max(columns(row[0])[j].get_bbox(renderer).width * scale
+                        - row[0].get_texts()[j].get_window_extent(renderer).width * scale
+                        for row in rows if j < len(row[0].get_texts()))
+                    for j in range(ncols)]
+        minimum = [max((measure(char) * scale
+                        for _, labels in chunks if j < len(labels)
+                        for char in labels[j] if not char.isspace()), default=0.0)
+                   for j in range(ncols)]
+        gaps = self.spacing["columnspacing"] * (ncols - 1)
+        available = width - sum(overhead) - gaps
+        minimum_width = sum(minimum) + sum(overhead) + gaps
+
+        def width_error(required):
+            return LayoutError(
+                "Legend columns cannot fit at the requested font and spacing; "
+                "increase canvas width or request fewer legend columns.",
+                axis="width", required_width=required + 2 * self.spacing["borderpad"],
+            )
+
+        for attempt in range(5):
+            widths = [max(columns(row[0])[j].get_bbox(renderer).width * scale
+                          for row in rows if j < len(row[0].get_texts()))
+                      for j in range(ncols)]
+            required = sum(widths) + gaps
+            if required <= width + 1e-6:
+                aligned = []
+                for legend, _, row_h in rows:
+                    native_columns = columns(legend)
+                    padded = [_PointWidthColumn(column, widths[j])
+                              for j, column in enumerate(native_columns)]
+                    for column in padded:
+                        column.set_figure(self.fig)
+                    native_columns[:] = padded
+                    row_w = legend.get_window_extent(renderer).width * scale
+                    aligned.append((legend, row_w, row_h))
+                return aligned
+            for legend, _, _ in rows:
+                legend.remove()
+            if minimum_width > width + 1e-6 or attempt == 4:
+                raise width_error(max(minimum_width, required))
+            if attempt:
+                # Backend rounding may slightly exceed isolated text metrics.
+                available -= required - width + 0.05
+            if available < sum(minimum) - 1e-6:
+                raise width_error(max(minimum_width, required))
+            low, high = 0.0, max(natural, default=0.0)
+            for _ in range(28):
+                cap = (low + high) / 2
+                total = sum(min(natural_w, max(minimum_w, cap))
+                            for natural_w, minimum_w in zip(natural, minimum))
+                if total <= available:
+                    low = cap
+                else:
+                    high = cap
+            text_widths = [min(natural_w, max(minimum_w, low)) / scale
+                           for natural_w, minimum_w in zip(natural, minimum)]
+            rows = [self._measure(handles, [_wrap(label, text_widths[j], measure)
+                                           for j, label in enumerate(labels)])
+                    for handles, labels in chunks]
+
     def reflow(self, max_width, max_height=None):
         """Remeasure at a new available size; obsolete artists are removed."""
         previous_position = self._position
@@ -241,6 +352,8 @@ class MeasuredLegend:
                 ncols = 1
             if ncols is None:
                 self.rows = self._automatic_rows(inner_width)
+            elif 1 < ncols < len(self.handles):
+                self.rows = self._tabulated_rows(inner_width, ncols)
             else:
                 self.rows = [self._wrapped_row(self.handles[i:i + ncols], self.labels[i:i + ncols],
                                               inner_width)

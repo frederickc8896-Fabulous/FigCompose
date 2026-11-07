@@ -22,6 +22,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from data_visuals.themes import load_theme, get_color_palette
 from data_visuals.utils.colors import get_color_preset, SEQUENTIAL_SCHEMES
 from data_visuals.renderer.mpl.presentation import blend, readable_text_color
+from data_visuals.core.typography import normalize_font_sizes
 
 
 # Only visual defaults belong to the renderer. In particular, do not reset a
@@ -49,7 +50,7 @@ class MplConfig:
     """
 
     def __init__(self, theme_name: str, n_groups: int = 0, *, palette: Optional[str] = None,
-                 physical: bool = False):
+                 physical: bool = False, font_sizes=None):
         theme = deepcopy(load_theme(theme_name))
         self.physical = physical
         self.publication = deepcopy(theme.get("publication", {}))
@@ -57,6 +58,7 @@ class MplConfig:
             "main_title": 11.0, "title": 9.0, "axis_label": 8.0,
             "tick": 7.0, "legend": 8.0,
             **self.publication.get("font_sizes", {}),
+            **normalize_font_sizes(font_sizes),
         }
         self.canvas_padding = float(self.publication.get("canvas_padding", 6.0))
         self.panel_gap = float(self.publication.get("panel_gap", 8.0))
