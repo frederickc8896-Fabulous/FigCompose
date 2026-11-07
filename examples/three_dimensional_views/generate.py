@@ -74,17 +74,23 @@ def draw_projections(ax, context):
 
 def draw_stacks(ax, context):
     frame = context.payload
+    x, y, bottoms, heights, colors = [], [], [], [], []
     for index, part in enumerate(PARTS):
-        records = frame[frame.component == part]
+        records = frame[frame.component == part].sort_values(["group_id", "sample"])
         bottom = np.array([
             frame[(frame.group_id == group) & (frame["sample"] == sample)
                   & frame.component.isin(PARTS[:index])].amount.sum()
             for group, sample in zip(records.group_id, records["sample"])
         ])
-        ax.bar3d(records.group_id.to_numpy() - 1.34,
-                 records["sample"].to_numpy() - 1.34, bottom, .68, .68,
-                 records.amount.to_numpy(), color=context.color(part), shade=False,
-                 edgecolor="white", linewidth=.4, zsort="average")
+        x.extend(records.group_id.to_numpy() - 1.34)
+        y.extend(records["sample"].to_numpy() - 1.34)
+        bottoms.extend(bottom)
+        heights.extend(records.amount.to_numpy())
+        colors.extend([context.color(part)] * len(records))
+    # All faces must share one collection: separate calls sort entire layers
+    # against each other and can paint a rear segment over a nearer stack.
+    ax.bar3d(x, y, bottoms, .68, .68, heights, color=colors, shade=False,
+             edgecolor="white", linewidth=.4, zsort="average")
     ax.set_xticks(range(3), labels=("G1", "G2", "G3"))
     ax.set_yticks(range(3), labels=("S1", "S2", "S3"))
     ax.set_zticks((0, 50, 100, 150))

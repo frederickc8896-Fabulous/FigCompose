@@ -30,6 +30,10 @@ present at every grid position.
 Stack labels must map one-to-one to group/sample positions. Each of the four
 profiles needs exactly one observation per supplied series/position pair.
 
+The 3D stack template submits all 27 cuboids in one `bar3d` call so Matplotlib can
+sort their faces together. Splitting the three components into separate collections
+can produce incorrect cross-layer occlusion even when the heights are correct.
+
 中文：三维不是额外的数据。瀑布图的纵深只表示系列顺序，墙上的“影子”仍是同一批点，
 三维柱图还可能遮住后排。每对图共用原始数值，帮助根据问题选择表达方式。
 导出PNG、SVG和预览；三维深度排序与内部遮挡仍需要人工检查。
