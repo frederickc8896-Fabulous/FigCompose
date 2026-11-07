@@ -1,8 +1,14 @@
 theme: modern
 palette: curated-10-vibrant
 font_family: Times New Roman
+font_sizes:
+  main_title: 16
 legend:
-  visible: false
+  scope: shared
+  position: top
+  ncols: 3
+  fontsize: 10.5
+  gap: 3
 category_colors:
   group:
     Imaging: '#fb9017'

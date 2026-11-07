@@ -13,7 +13,7 @@ import runpy
 import matplotlib
 matplotlib.use("Agg")
 from matplotlib.path import Path as ArtistPath
-from matplotlib.patches import PathPatch, Wedge
+from matplotlib.patches import Patch, PathPatch, Wedge
 import numpy as np
 import pandas as pd
 
@@ -125,20 +125,32 @@ def build_figure(data_path=None, profile_path=None) -> Figure:
                                facecolor=color, edgecolor="white", linewidth=1.2, zorder=3))
             midpoint = (start + stop) / 2
             location = polar(midpoint, 1.19)
-            text.append(ax.text(*location, f"{name}\n{totals[name]:g}", ha="center", va="center",
-                                linespacing=1.35, **context.text_kwargs("body", fontsize=9)))
+            text.append(ax.text(location[0], location[1] + .025, name,
+                                ha="center", va="bottom",
+                                **context.text_kwargs("body", fontsize=11, fontweight="bold")))
+            text.append(ax.text(location[0], location[1] - .025, f"{totals[name]:g}",
+                                ha="center", va="top",
+                                **context.text_kwargs("body", fontsize=10, color="#657381")))
         total = float(data["value"].sum())
         text.append(ax.text(0, -1.39, f"{total:g} total connection weight  ·  {len(names)} groups", ha="center",
-                            va="center", **context.text_kwargs("body", fontsize=9)))
-        text.append(ax.text(0, -1.50, "Endpoint arc width = connection value · undirected links",
-                            ha="center", va="center", **context.text_kwargs("annotation", fontsize=8)))
-        return PanelResult(artists=text)
+                            va="center", **context.text_kwargs("body", fontsize=10.5)))
+        text.append(ax.text(0, -1.53, "Ribbon width = connection value\n"
+                            "Color identifies one endpoint · links are undirected",
+                            ha="center", va="center", linespacing=1.4,
+                            **context.text_kwargs("annotation", fontsize=9.5)))
+        handles = tuple(Patch(facecolor=context.color(name), edgecolor="none", label=name)
+                        for name in names)
+        return PanelResult(artists=text, legend_handles=handles)
 
-    figure = Figure(config=cfg, rows=1, cols=1, canvas={"width": 200, "height": 218},
-                    title="Shared structure, visible connections", legend=False)
+    figure = Figure(config=cfg, rows=1, cols=1, canvas={"width": 210},
+                    title="Shared structure, visible connections")
+    # The panel includes the labels and reading note, not a padded square.
+    # Keep equal data-unit scales so tightening this viewport preserves circles.
+    x_limits, y_limits = (-1.40, 1.40), (-1.66, 1.20)
+    aspect = (x_limits[1] - x_limits[0]) / (y_limits[1] - y_limits[0])
     figure[0, 0].custom(draw, color_group="group", categories=names,
-                       limits=((-1.48, 1.48), (-1.61, 1.35)),
-                       min_size=(420, 420), preferred_aspect=1, box_aspect=1)
+                       limits=(x_limits, y_limits), min_size=(420, 420),
+                       preferred_aspect=aspect, box_aspect=aspect)
     return figure
 
 

@@ -95,29 +95,50 @@ def build_figure(data_path=None, profile_path=None) -> Figure:
         text = []
         xs = (.11, .50, .89)
         width = .057
+        total = float(data["count"].sum())
+        ordered = data.sort_values(list(STAGES), kind="stable")
         for left, right in zip(range(2), range(1, 3)):
             for index in data.sort_values("count", ascending=False).index:
                 row = data.loc[index]
                 ax.add_patch(PathPatch(flow_path(xs[left] + width / 2, xs[right] - width / 2,
                                                  slots[STAGES[left], index], slots[STAGES[right], index]),
-                                       facecolor=context.color(row["entry"]), edgecolor="white",
-                                       linewidth=.25, alpha=.57, zorder=1))
-        for x, stage, title in zip(xs, STAGES, ("Before trial", "After trial", "Final choice")):
-            text.append(ax.text(x, .96, title, ha="center", va="center",
-                                **context.text_kwargs("body", fontsize=10)))
+                                       facecolor=context.color(row["entry"]),
+                                       edgecolor=(1, 1, 1, .55),
+                                       linewidth=.16, alpha=.62, zorder=1))
+        for number, (x, stage, title) in enumerate(
+                zip(xs, STAGES, ("Before trial", "After trial", "Final choice")), start=1):
+            text.append(ax.text(x, .984, f"{number:02d}", ha="center", va="center",
+                                **context.text_kwargs("annotation", fontsize=9, color="#7B8797")))
+            text.append(ax.text(x, .943, title, ha="center", va="center",
+                                **context.text_kwargs("body", fontsize=11.5, fontweight="bold")))
+            ax.plot((x - .056, x + .056), (.912, .912), color="#D6DEE8", linewidth=.6, zorder=0)
             for label in categories[stage]:
                 low, high = nodes[stage, label]
                 ax.add_patch(Rectangle((x - width / 2, low), width, high - low,
-                                       facecolor="white", edgecolor="#9aa5b3", linewidth=.8, zorder=3))
-                text.append(ax.text(x, (low + high) / 2, f"{label}\n{totals[stage][label]:g}",
-                                    ha="center", va="center", linespacing=1.35, zorder=4,
-                                    **context.text_kwargs("body", fontsize=9)))
-        total = float(data["count"].sum())
+                                       facecolor="#FBFCFE", edgecolor="#B4C0D0", linewidth=.65, zorder=3))
+                # The thin stripe retains each original path slot and color.
+                # Its composition is data, not a new color for the current category.
+                for index, row in ordered[ordered[stage] == label].iterrows():
+                    slot_low, slot_high = slots[stage, index]
+                    ax.add_patch(Rectangle((x - width / 2 + .002, slot_low), .0065,
+                                           slot_high - slot_low, facecolor=context.color(row["entry"]),
+                                           edgecolor="none", zorder=4))
+                middle = (low + high) / 2
+                count = float(totals[stage][label])
+                text.append(ax.text(x + .003, middle + .033, label,
+                                    ha="center", va="center", zorder=5,
+                                    **context.text_kwargs("body", fontsize=11.5, fontweight="bold")))
+                text.append(ax.text(x + .003, middle - .002, f"{count:g}",
+                                    ha="center", va="center", zorder=5,
+                                    **context.text_kwargs("body", fontsize=11, fontweight="bold")))
+                text.append(ax.text(x + .003, middle - .036, f"{count / total:.1%}",
+                                    ha="center", va="center", zorder=5,
+                                    **context.text_kwargs("annotation", fontsize=9, color="#657386")))
         text.append(ax.text(.5, .075, f"{total:g} participants · one common count scale at every stage",
-                            ha="center", va="center", **context.text_kwargs("body", fontsize=9)))
-        text.append(ax.text(.5, .03, "Ribbon width = participants · color = initial choice",
-                            ha="center", va="center", **context.text_kwargs("annotation", fontsize=8)))
-        handles = tuple(Patch(facecolor=context.color(label), edgecolor="none", alpha=.7,
+                            ha="center", va="center", **context.text_kwargs("body", fontsize=9.5)))
+        text.append(ax.text(.5, .03, "Band / stripe color = initial choice · % = share of all participants",
+                            ha="center", va="center", **context.text_kwargs("annotation", fontsize=9)))
+        handles = tuple(Patch(facecolor=context.color(label), edgecolor="none", alpha=.62,
                               label=f"Initially {label}") for label in categories["entry"])
         return PanelResult(artists=text, legend_handles=handles)
 

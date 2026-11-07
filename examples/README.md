@@ -3,6 +3,8 @@
 Download or clone these folders, install **FigCompose 0.1.2+**, and run a generator.
 Each example includes its actual CSV, a reusable `style.yaml`, the complete script and a preview.
 The library is installed from PyPI; these example files are available in the GitHub repository.
+The updated [chord template](chord_connections/README.md) uses typography and layout improvements
+from the current repository; install it with `python -m pip install .` from the repository root.
 
 下载或克隆这些目录，安装 **FigCompose 0.1.2+** 后运行脚本。每个示例包含实际 CSV、统一风格配置、完整代码和预期效果；无需本地 demo 或开发目录。
 

@@ -5,6 +5,7 @@ legend:
   scope: shared
   position: top
   ncols: 3
+  fontsize: 9
 category_colors:
   entry:
     A: '#e63946'

@@ -4,7 +4,8 @@ This ready-to-use **custom Matplotlib template** runs inside FigCompose. It is n
 The synthetic example connects six research domains. Each CSV row is one undirected pair.
 
 ```bash
-python -m pip install "FigCompose>=0.1.2"
+# From the repository root (this template uses the new typography settings):
+python -m pip install .
 python examples/chord_connections/generate.py
 ```
 
@@ -25,6 +26,13 @@ The edge total is a sum of pair weights, not necessarily a count of unique indiv
 The line through a ribbon does not encode geographical distance, direction or causality.
 Colors help trace one endpoint; they do not establish a flow direction.
 Duplicate pairs and self-links are rejected rather than silently aggregated.
+The six-group legend sits below the 16 pt title in two aligned rows of three columns.
+Its 10.5 pt labels and title size are declared in `style.yaml`; group names use 11 pt,
+their incident totals use 10 pt, and the reading note uses 9.5 pt.
+FigCompose measures the required height at a fixed width of 210 mm. A tight custom
+viewport preserves equal coordinate scales while avoiding unused space above the diagram.
+The `font_sizes` configuration and aligned legend columns require the current repository
+version; they have not yet been released in PyPI 0.1.2.
 
 中文：修改 `data.csv` 中的对象对及权重即可复用。外侧弧长表示该组关联权重之和，弦两端的角宽共同表示同一权重。
 这是无向关联图，不能把弦的颜色或空间位置当作因果或流向。所有数据均为模拟数据。
