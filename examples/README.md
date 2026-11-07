@@ -3,7 +3,7 @@
 Download or clone these folders, install **FigCompose 0.1.2+**, and run a generator.
 Each example includes its actual CSV, a reusable `style.yaml`, the complete script and a preview.
 The library is installed from PyPI; these example files are available in the GitHub repository.
-The updated [chord template](chord_connections/README.md) uses typography and layout improvements
+The updated [chord template](chord_connections/README.md) and [six-view distribution series](intervals/README.md) use typography and layout improvements
 from the current repository; install it with `python -m pip install .` from the repository root.
 
 下载或克隆这些目录，安装 **FigCompose 0.1.2+** 后运行脚本。每个示例包含实际 CSV、统一风格配置、完整代码和预期效果；无需本地 demo 或开发目录。
@@ -18,7 +18,7 @@ python examples/circular_scores/generate.py
 | Example / 示例 | What it demonstrates / 展示内容 | Preview / 预览 |
 |---|---|---|
 | [Mixed figure / 四图组合](mixed_figure/README.md) | Four native charts; the absent method retains its identity slot / 四类原生图、缺席方法保留颜色位置 | ![Mixed figure](mixed_figure/preview.png) |
-| [Intervals / 差值区间](intervals/README.md) | Stored paired estimates and supplied asymmetric bounds / 配对估计与预计算非对称区间 | ![Intervals](intervals/preview.png) |
+| [Differences and distributions / 差异与分布](intervals/README.md) | Six statistical views, paired estimates and supplied asymmetric bounds / 六种统计视角、配对估计与预计算非对称区间 | ![Six statistical views](intervals/series/preview.png) |
 | [Circular scores / 同心环条](circular_scores/README.md) | Native circular scores, independent scales and group means / 原生独立分数量尺与均值 | ![Circular scores](circular_scores/preview.png) |
 | [Participant tracks / 环形多轨](participant_tracks/README.md) | Five aligned tracks and a summary of the same cohort / 同一队列五轨对齐与总体摘要 | ![Participant tracks](participant_tracks/preview.png) |
 | [Circular clustering / 环形聚类](clustered_heatmap/README.md) | Actual Ward tree, signed values and cluster annotations / 真实聚类树、数值轨与分组注释 | ![Circular clustering](clustered_heatmap/preview.png) |

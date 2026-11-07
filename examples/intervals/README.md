@@ -1,5 +1,29 @@
 # Differences and intervals / 差值与区间
 
+New: [six complementary views of paired data / 差异与不确定性六图系列](series/README.md).
+The overview combines native box plots and confidence intervals with ready-to-use
+raincloud, ridgeline, paired-path and paired-estimation templates. Shared data identities,
+fonts and the figure legend are managed by FigCompose.
+
+```bash
+# Current repository version; the new font_sizes setting is not in PyPI 0.1.2:
+python -m pip install .
+python examples/intervals/generate_series.py
+python examples/intervals/generate_series.py --view raincloud --condition 4 --out my_raincloud
+```
+
+![Six views of paired data / 六图总览](series/preview.png)
+
+The new series reads both `paired.csv` and the supplied estimates in `data.csv`.
+It validates the original pairs and independently checks stored means and paired-t intervals
+before drawing. No sample is generated or resampled. KDE widths describe individual differences;
+they are not confidence intervals for the mean. Each panel names its data subset.
+
+新增系列读取原始配对观测与预计算汇总：箱线、雨云和配对连线默认选条件4；山脊图选Dataset II的五条件；
+配对估计图选Dataset II、条件4；区间图汇总全部15个单元。单图可独立导出，原600行数据与CI不变。
+
+The original supplied-bound example remains available below, including its asymmetric-bound input.
+
 ![Expected output / 预期效果](preview.png)
 
 ```bash

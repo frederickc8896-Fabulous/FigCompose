@@ -1,0 +1,27 @@
+theme: modern
+palette: curated-5-cool
+font_family: Times New Roman
+font_sizes:
+  main_title: 16
+  title: 10.5
+  axis_label: 9
+  tick: 8
+  legend: 10
+legend:
+  scope: shared
+  position: top
+  ncols: 3
+  gap: 4
+  order: [Dataset I, Dataset II, Dataset III]
+category_colors:
+  dataset:
+    Dataset I: '#ff6b35'
+    Dataset II: '#1976d2'
+    Dataset III: '#0d47a1'
+series:
+  dataset:
+    - {id: Dataset I, label: Dataset I, color: '#ff6b35', marker: o}
+    - {id: Dataset II, label: Dataset II, color: '#1976d2', marker: o}
+    - {id: Dataset III, label: Dataset III, color: '#0d47a1', marker: o}
+fields:
+  difference_pp: {label: 'Paired change: B - A', unit: pp}

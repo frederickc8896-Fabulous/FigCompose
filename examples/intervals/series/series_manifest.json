@@ -1,0 +1,80 @@
+{
+  "synthetic": true,
+  "focus_condition": 4,
+  "ridge_dataset": "Dataset II",
+  "observations": 600,
+  "focus_pairs": 120,
+  "estimates": 15,
+  "views": [
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        240.0,
+        297.5640461215933
+      ],
+      "destination": ".",
+      "view": "overview"
+    },
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        180.0,
+        146.70968749999997
+      ],
+      "destination": "boxplot",
+      "view": "boxplot"
+    },
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        180.0,
+        160.2850841346154
+      ],
+      "destination": "raincloud",
+      "view": "raincloud"
+    },
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        180.0,
+        165.034015758547
+      ],
+      "destination": "ridgeline",
+      "view": "ridgeline"
+    },
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        180.0,
+        160.06413141025644
+      ],
+      "destination": "paired",
+      "view": "paired"
+    },
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        180.0,
+        152.7354700854701
+      ],
+      "destination": "estimation",
+      "view": "estimation"
+    },
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        180.0,
+        168.81262499999997
+      ],
+      "destination": "forest",
+      "view": "forest"
+    }
+  ]
+}
