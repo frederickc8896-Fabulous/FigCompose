@@ -515,6 +515,28 @@ class Figure:
             })
             subplot_title = decl.get("title")
             chart = create_chart(ct, mapping, title=subplot_title)
+            if ct == "chord":
+                # Both endpoints share the source field's registered identity
+                # domain. The target column contributes to that same domain.
+                chart.mapping["group"] = chart.mapping["source"]
+                if not self._legend and "legend" not in (decl.get("chart_opts") or {}):
+                    decl.setdefault("chart_opts", {})
+                    if decl["chart_opts"] is None:
+                        decl["chart_opts"] = {}
+                    decl["chart_opts"]["legend"] = {"visible": False}
+            # Identity registration controls geometry that is computed before
+            # rendering (stack order, waterfall depth, chord node order).
+            identity_group = chart.mapping.get("group")
+            order_option = ({"bar3d": "group_order", "waterfall3d": "order", "chord": "order"}.get(ct)
+                            or ("order" if ct in {"raincloud", "ridgeline"}
+                                and chart.mapping.get("x") == identity_group else None))
+            if (order_option and getattr(chart, order_option) is None
+                    and identity_group in self._series and identity_group in panel_df.columns):
+                observed = panel_df[identity_group].dropna().unique().tolist()
+                if ct == "chord":
+                    observed.extend(panel_df[chart.mapping["target"]].dropna().unique().tolist())
+                setattr(chart, order_option, [entry["id"] for entry in self._series[identity_group]
+                                             if entry["id"] in observed])
             # 校验
             errors = chart.validate(panel_df)
             if errors:
@@ -546,7 +568,11 @@ class Figure:
             cols = req.get("columns", {})
             derived[(row, col)] = {}
             chart = chart_specs.get((row, col))
-            if chart and chart.chart_type == "circular_bar":
+            if chart and callable(getattr(chart, "compute_data", None)):
+                if self._subplot_decls[(row, col)].get("y_columns"):
+                    raise ValueError(f"[{chart.chart_type}] use where to select observations before computation.")
+                computed[(row, col)], derived[(row, col)] = chart.compute_data(panel_df)
+            elif chart and chart.chart_type == "circular_bar":
                 computed[(row, col)], derived[(row, col)] = compute_circular_bar(
                     panel_df, chart.mapping, value_range=chart.value_range,
                     aggregate=chart.aggregate, summary=chart.summary, center=chart.center,
@@ -778,6 +804,12 @@ class Figure:
 
         active_groups = {chart.mapping.get("group") for chart in chart_specs.values()}
         custom_categories: Dict[str, List[Any]] = {}
+        for chart in chart_specs.values():
+            if chart.chart_type == "chord":
+                group = chart.mapping["source"]
+                custom_categories.setdefault(group, []).extend(
+                    pd.concat([df[chart.mapping["source"]], df[chart.mapping["target"]]]).dropna().unique().tolist()
+                )
         for decl in self._subplot_decls.values():
             custom = decl.get("custom_panel")
             if custom is not None and custom.color_group is not None:
@@ -857,7 +889,7 @@ class Figure:
             chart = chart_specs.get((row, col))
             group_col = chart.mapping.get("group") if chart else None
             labels = group_label_maps.get(group_col, _label_map)
-            if group_col and group_col in cdf.columns and labels:
+            if group_col and group_col in cdf.columns and labels and chart.chart_type != "chord":
                 cdf = cdf.copy()
                 cdf[group_col] = cdf[group_col].map(labels).fillna(cdf[group_col])
                 identity = ([group_col, chart.mapping["x"]] if chart.chart_type in {"radar", "circular_bar"}
@@ -887,7 +919,13 @@ class Figure:
             group_col = chart.mapping.get("group")
             if group_col and group_col in df.columns and group_col not in color_domains:
                 values = df[group_col].dropna().unique().tolist()
+                values.extend(custom_categories.get(group_col, []))
                 mapped = [display(group_col, value) for value in values]
+                if any(callable(getattr(chart, "compute_data", None)) and chart.mapping.get("group") == group_col
+                       for chart in chart_specs.values()):
+                    raw = list(dict.fromkeys(values))
+                    if len({display(group_col, value) for value in raw}) != len(raw):
+                        raise ValueError(f"labels for {group_col!r} must keep native chart identities distinct")
                 color_domains[group_col] = sorted(
                     dict.fromkeys(mapped), key=lambda value: (type(value).__name__, str(value))
                 )
@@ -1070,7 +1108,8 @@ class Figure:
         # explicitly rather than inheriting another panel's numeric labels.
         for cell in layout_spec["cells"]:
             decl = self._subplot_decls.get((cell["row"], cell["col"]))
-            if decl and decl["chart_type"] in {"custom", "pie", "donut", "radar", "circular_bar"}:
+            from data_visuals.charts.families import ROUND_CHARTS, THREE_D_CHARTS
+            if decl and decl["chart_type"] in ROUND_CHARTS | THREE_D_CHARTS | {"custom", "estimation"}:
                 cell["shared_axes"] = {
                     "x_shared": False, "y_shared": False,
                     "x_shared_with": -1, "y_shared_with": -1,
@@ -1089,7 +1128,7 @@ class Figure:
                 if decl.get("domain"):
                     chart_opts["domain"] = decl["domain"]
                 if decl.get("chart_opts"):
-                    if chart.chart_type in {"pie", "donut", "radar", "circular_bar"}:
+                    if chart.chart_type in {"pie", "donut", "radar", "circular_bar"} or callable(getattr(chart, "compute_data", None)):
                         # The validated ChartSpec already resolved typed
                         # overrides and converted NumPy scalars to JSON-safe
                         # values. Reapply only renderer-specific options.
@@ -1102,6 +1141,13 @@ class Figure:
                 if chart.chart_type in {"pie", "donut"} and chart_opts.get("order"):
                     chart_opts["order"] = [display(chart.mapping.get("group"), value) for value in chart_opts["order"]]
                 group = chart.mapping.get("group")
+                if group:
+                    raw_domain = list(custom_categories.get(group, []))
+                    if group in df.columns:
+                        raw_domain.extend(df[group].dropna().unique().tolist())
+                    aliases = {raw: display(group, raw) for raw in raw_domain if display(group, raw) != raw}
+                    if aliases:
+                        chart_opts["category_aliases"] = aliases
                 if group in series_order:
                     chart_opts["series_order"] = list(series_order[group])
                 styles = deepcopy(registered_styles.get(group, {}))
@@ -1120,6 +1166,11 @@ class Figure:
                 chart_opts = resolve_field_options(
                     chart.chart_type, chart.mapping, chart_opts, self._fields, data=panel_data[(r, c)],
                 )
+                if chart.chart_type == "circular_bar" and chart_opts.get("summary") == "mean":
+                    if chart_opts.get("summary_position", "auto") == "auto":
+                        from data_visuals.themes import load_theme
+                        showcase = load_theme(self._theme).get("presentation", {}).get("showcase", False)
+                        chart_opts["summary_position"] = "top" if showcase else "inline"
                 measures = chart.mapping.get("y")
                 secondary = chart.mapping.get("y2")
                 if isinstance(measures, (list, tuple)) or secondary:

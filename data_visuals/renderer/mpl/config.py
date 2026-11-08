@@ -52,6 +52,7 @@ class MplConfig:
     def __init__(self, theme_name: str, n_groups: int = 0, *, palette: Optional[str] = None,
                  physical: bool = False, font_sizes=None):
         theme = deepcopy(load_theme(theme_name))
+        self.showcase = bool(theme.get("presentation", {}).get("showcase", False))
         self.physical = physical
         self.publication = deepcopy(theme.get("publication", {}))
         self.font_sizes = {

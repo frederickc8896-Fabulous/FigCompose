@@ -24,6 +24,10 @@ def _populate() -> None:
     from data_visuals.renderer.mpl.charts.pie import _draw_pie
     from data_visuals.renderer.mpl.charts.radar import _draw_radar
     from data_visuals.renderer.mpl.charts.circular_bar import _draw_circular_bar
+    from data_visuals.renderer.mpl.charts.chord import _draw_chord
+    from data_visuals.renderer.mpl.charts.distribution import _draw_raincloud, _draw_ridgeline
+    from data_visuals.renderer.mpl.charts.three_d import _draw_scatter3d, _draw_waterfall3d, _draw_bar3d
+    from data_visuals.renderer.mpl.charts.paired import _draw_paired, _draw_estimation
 
     _BUILDERS.update({
         "bar": _draw_bar,
@@ -37,6 +41,14 @@ def _populate() -> None:
         "donut": _draw_pie,
         "radar": _draw_radar,
         "circular_bar": _draw_circular_bar,
+        "chord": _draw_chord,
+        "raincloud": _draw_raincloud,
+        "ridgeline": _draw_ridgeline,
+        "scatter3d": _draw_scatter3d,
+        "waterfall3d": _draw_waterfall3d,
+        "bar3d": _draw_bar3d,
+        "paired": _draw_paired,
+        "estimation": _draw_estimation,
     })
 
 

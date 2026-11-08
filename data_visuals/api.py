@@ -24,7 +24,7 @@ def _default_title(kind: str, declaration: dict[str, Any], index: int, count: in
                    fields: Mapping[str, Any] | None = None) -> str:
     if kind == "histogram":
         metric = declaration.get("x", "")
-    elif kind in {"pie", "donut"}:
+    elif kind in {"pie", "donut", "chord", "bar3d"}:
         metric = declaration.get("value") or declaration.get("group", "")
     elif kind == "heatmap":
         metric = declaration.get("value", "")
@@ -125,11 +125,11 @@ def plot(
             raise ValueError(f"plots[{index}]: {error}") from error
 
         if "metric" in declaration:
-            target = "x" if kind == "histogram" else "value" if kind in {"heatmap", "confusion", "pie", "donut"} else "y"
+            target = "x" if kind == "histogram" else "value" if kind in {"heatmap", "confusion", "pie", "donut", "chord", "bar3d"} else "y"
             if target in declaration:
                 raise ValueError(f"plots[{index}] 的 metric 与 {target} 重复，请只指定其中一个。")
             declaration[target] = declaration.pop("metric")
-        if kind in {"bar", "line", "box", "scatter", "radar", "circular_bar"} and x is not None:
+        if kind in {"bar", "line", "box", "scatter", "radar", "circular_bar", "raincloud", "ridgeline", "paired", "estimation", "scatter3d", "waterfall3d", "bar3d"} and x is not None:
             declaration.setdefault("x", x)
         if "group" in (set(chart.required_fields) | set(chart.optional_fields)) and group is not None:
             declaration.setdefault("group", group)

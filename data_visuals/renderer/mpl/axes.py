@@ -14,7 +14,9 @@ from numbers import Real
 import numpy as np
 
 
-_CARTESIAN = {"bar", "line", "scatter", "box", "histogram"}
+from data_visuals.charts.families import CARTESIAN_CHARTS, THREE_D_CHARTS
+
+_CARTESIAN = set(CARTESIAN_CHARTS)
 _MATRICES = {"heatmap", "confusion"}
 _COMMON = {
     f"{axis}{suffix}"
@@ -66,19 +68,21 @@ def validate_axis_options(kind, options):
     if not isinstance(options, Mapping):
         raise ValueError("chart_opts must be a mapping")
     supplied = _COMMON.intersection(options)
+    if kind in THREE_D_CHARTS:
+        supplied |= {f"z{suffix}" for suffix in ("label", "lim", "ticks", "ticklabels", "scale", "format")}.intersection(options)
     if kind in _MATRICES:
         unsupported = supplied - _MATRIX_OPTIONS
     elif kind == "radar":
         unsupported = supplied - {"ylim"}
-    elif kind in _CARTESIAN:
+    elif kind in _CARTESIAN | THREE_D_CHARTS:
         unsupported = set()
     else:
         unsupported = supplied
     if unsupported:
         raise ValueError(f"[{kind}] axis options are not applicable: {', '.join(sorted(unsupported))}")
-    if kind not in _CARTESIAN | _MATRICES:
+    if kind not in _CARTESIAN | _MATRICES | THREE_D_CHARTS:
         return
-    for axis in ("x", "y"):
+    for axis in (("x", "y", "z") if kind in THREE_D_CHARTS else ("x", "y")):
         prefix = f"[{kind}] {axis}"
         if f"{axis}label" in options and not isinstance(options[f"{axis}label"], str):
             raise ValueError(f"{prefix}label must be a string; use '' to hide the title")
@@ -86,6 +90,8 @@ def validate_axis_options(kind, options):
             scale = options[f"{axis}scale"]
             if not isinstance(scale, str) or scale not in _SCALES:
                 raise ValueError(f"{prefix}scale must be 'linear', 'log' or 'symlog'")
+            if kind in THREE_D_CHARTS and scale != "linear":
+                raise ValueError(f"{prefix}scale currently supports linear coordinates only")
         scale = options.get(f"{axis}scale", "linear")
         if f"{axis}lim" in options:
             limits = _sequence(options[f"{axis}lim"], f"{prefix}lim")
@@ -117,6 +123,13 @@ def validate_axis_options(kind, options):
     if kind in {"bar", "box"}:
         categorical = "y" if options.get("horizontal", False) else "x"
         _validate_category_axis(kind, categorical, options)
+    if kind in {"raincloud", "ridgeline"}:
+        _validate_category_axis(kind, "y" if options.get("horizontal", True) else "x", options)
+    if kind == "waterfall3d":
+        _validate_category_axis(kind, "y", options)
+    if kind == "bar3d":
+        for axis in ("x", "y"):
+            _validate_category_axis(kind, axis, options)
 
 
 def _validate_category_axis(kind, axis, options):
@@ -139,7 +152,7 @@ def apply_axis_options(ax, sp):
     if options is None:
         options = {}
     validate_axis_options(kind, options)
-    if kind not in _CARTESIAN | _MATRICES:
+    if kind not in _CARTESIAN | _MATRICES | THREE_D_CHARTS:
         return
     if kind == "line" and ("xformat" in options or options.get("xscale", "linear") != "linear"):
         # Line's renderer uses integer positions for string categories. Treat
@@ -151,26 +164,26 @@ def apply_axis_options(ax, sp):
         if column in frame and not pd.api.types.is_numeric_dtype(frame[column]):
             _validate_category_axis(kind, "x", options)
     labels = dict(getattr(ax, "_data_visuals_axis_labels", {}))
-    for axis in ("x", "y"):
-        axis_object = ax.xaxis if axis == "x" else ax.yaxis
-        old_limits = (ax.get_xlim if axis == "x" else ax.get_ylim)()
+    for axis in (("x", "y", "z") if kind in THREE_D_CHARTS else ("x", "y")):
+        axis_object = getattr(ax, f"{axis}axis")
+        old_limits = getattr(ax, f"get_{axis}lim")()
         if f"{axis}label" in options:
             labels[axis] = options[f"{axis}label"]
-            (ax.set_xlabel if axis == "x" else ax.set_ylabel)(labels[axis])
+            getattr(ax, f"set_{axis}label")(labels[axis])
         if f"{axis}scale" in options:
-            (ax.set_xscale if axis == "x" else ax.set_yscale)(options[f"{axis}scale"])
+            getattr(ax, f"set_{axis}scale")(options[f"{axis}scale"])
         if f"{axis}ticks" in options:
             kwargs = {}
             if f"{axis}ticklabels" in options:
                 kwargs["labels"] = list(options[f"{axis}ticklabels"])
-            (ax.set_xticks if axis == "x" else ax.set_yticks)(list(options[f"{axis}ticks"]), **kwargs)
+            getattr(ax, f"set_{axis}ticks")(list(options[f"{axis}ticks"]), **kwargs)
             # Matrix categories keep their complete extent and inverted y
             # direction even when users thin or rename their ticks.
             if kind in _MATRICES:
-                (ax.set_xlim if axis == "x" else ax.set_ylim)(old_limits)
+                getattr(ax, f"set_{axis}lim")(old_limits)
         if f"{axis}format" in options:
             function = _format_function(options[f"{axis}format"], f"[{kind}] {axis}format")
             axis_object.set_major_formatter(FuncFormatter(lambda value, pos, fn=function: fn(value)))
         if f"{axis}lim" in options:
-            (ax.set_xlim if axis == "x" else ax.set_ylim)(*options[f"{axis}lim"])
+            getattr(ax, f"set_{axis}lim")(*options[f"{axis}lim"])
     ax._data_visuals_axis_labels = labels

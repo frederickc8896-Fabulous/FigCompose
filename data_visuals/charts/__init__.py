@@ -339,4 +339,8 @@ from data_visuals.charts.confusion import Confusion  # noqa: E402, F401
 from data_visuals.charts.pie import Pie, Donut  # noqa: E402, F401
 from data_visuals.charts.radar import Radar  # noqa: E402, F401
 from data_visuals.charts.circular_bar import CircularBar  # noqa: E402, F401
+from data_visuals.charts.chord import Chord  # noqa: E402, F401
+from data_visuals.charts.distribution import Raincloud, Ridgeline  # noqa: E402, F401
+from data_visuals.charts.three_d import Scatter3D, Waterfall3D, Bar3D  # noqa: E402, F401
+from data_visuals.charts.paired import Paired, Estimation  # noqa: E402, F401
 

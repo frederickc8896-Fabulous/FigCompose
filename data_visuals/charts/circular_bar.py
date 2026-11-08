@@ -31,8 +31,11 @@ class CircularBar(ChartSpec):
     aggregate: str | None = None
     order: list[Any] | None = None
     rounded: bool = True
+    summary_position: str = "auto"
 
     def validate(self, df: pd.DataFrame) -> list[str]:
+        if not isinstance(self.summary_position, str) or self.summary_position not in {"auto", "inline", "top"}:
+            return ["[circular_bar] summary_position must be auto, inline or top"]
         return validate_circular_input(
             df, self.mapping, value_range=self.value_range, summary=self.summary,
             center=self.center, aggregate=self.aggregate, order=self.order,
@@ -45,6 +48,6 @@ class CircularBar(ChartSpec):
 
     def _chart_options(self) -> dict[str, Any]:
         defaults = {"value_range": (0, 100), "summary": None, "center": "count",
-                    "aggregate": None, "order": None, "rounded": True}
+                    "aggregate": None, "order": None, "rounded": True, "summary_position": "auto"}
         return {key: _plain_options(getattr(self, key)) for key, default in defaults.items()
                 if getattr(self, key) != default}

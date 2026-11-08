@@ -445,7 +445,12 @@ def _analyze_drawn(fig, spec, min_fontsize, min_tick_gap, tolerance):
                     # Re-running _update_ticks here resets projected native
                     # label positions to unprojected 2D data coordinates.
                     low, high = sorted(axis.get_view_interval())
-                    ticks = [tick for tick in axis.majorTicks + axis.minorTicks
+                    # Axes cache surplus Tick objects after a locator changes.
+                    # Only the current locator's prefix was projected by draw;
+                    # a cached tick can still be visible and in range.
+                    active = (axis.majorTicks[:len(axis.get_majorticklocs())]
+                              + axis.minorTicks[:len(axis.get_minorticklocs())])
+                    ticks = [tick for tick in active
                              if low - 1e-12 <= tick.get_loc() <= high + 1e-12]
                 else:
                     ticks = axis._update_ticks()

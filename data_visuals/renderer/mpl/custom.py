@@ -13,7 +13,8 @@ def create_panel_axes(fig, sp, rect):
     panel = sp.get("_custom_panel") if sp["chart"] == "custom" else None
     if sp["chart"] == "custom" and not isinstance(panel, CustomPanel):
         raise TypeError("A custom subplot requires its runtime CustomPanel; use Figure[row, col].custom(draw)")
-    projection = panel.projection if panel else ("polar" if sp["chart"] == "radar" else None)
+    from data_visuals.charts.families import THREE_D_CHARTS
+    projection = panel.projection if panel else ("3d" if sp["chart"] in THREE_D_CHARTS else "polar" if sp["chart"] == "radar" else None)
     options = dict(panel.axes_options) if panel else {}
     return fig.add_axes(rect, projection=projection,
                         label=f"data_visuals:{sp['row']},{sp['col']}", **options)
@@ -171,18 +172,20 @@ def position_custom(record, zone, sp, cfg, maps, width, height):
     return actual
 
 
+def projected_axis_label_bounds(ax, renderer):
+    """Axes3D layout-only tight bounds omit its three projected axis titles."""
+    if ax.name != "3d" or not ax._axis3don:
+        return []
+    return [axis.label.get_window_extent(renderer) for axis in ax._axis_map.values()
+            if axis.get_visible() and axis.label.get_visible() and axis.label.get_text()]
+
+
 def custom_bounds(record, renderer):
     """Explicit artists may live at Figure level or opt out of Axes layout."""
     boxes = []
     if record is None:
         return boxes
-    if record["axes"].name == "3d" and record["axes"]._axis3don:
-        # Axes3D always calls its axes' tight-bbox in layout-only mode, which
-        # omits the axis labels even for get_tightbbox(for_layout_only=False).
-        # Their window extents are valid after draw and must reserve space.
-        for axis in record["axes"]._axis_map.values():
-            if axis.get_visible() and axis.label.get_visible() and axis.label.get_text():
-                boxes.append(axis.label.get_window_extent(renderer))
+    boxes.extend(projected_axis_label_bounds(record["axes"], renderer))
     for artist in record["result"].artists:
         if not artist.get_visible():
             continue
@@ -237,6 +240,8 @@ def place_custom_title(record, renderer, cfg, height):
             ax.figure.canvas.draw()
         boxes = [ax.get_tightbbox(renderer, for_layout_only=True)]
         boxes.extend(custom_bounds(record["custom"], renderer))
+        if record["custom"] is None:
+            boxes.extend(projected_axis_label_bounds(ax, renderer))
     finally:
         title.set_visible(visible)
     from matplotlib.transforms import Bbox

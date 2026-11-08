@@ -7,6 +7,8 @@ candidate is committed to FigureSpec; no Matplotlib Figure is kept alive.
 
 from __future__ import annotations
 
+from data_visuals.charts.families import ROUND_CHARTS, THREE_D_CHARTS
+
 from dataclasses import replace
 import math
 
@@ -24,7 +26,14 @@ def _preferred_aspect(panel):
     if panel.custom_panel is not None:
         custom = panel.custom_panel
         return custom.box_aspect or custom.preferred_aspect
-    if panel.chart_type in {"pie", "donut", "radar", "circular_bar"}:
+    if panel.chart_type == "circular_bar" and panel.chart_options.get("summary") == "mean" and panel.chart_options.get("summary_position") == "top":
+        count = panel.derived_data.get("circular_bar", {}).get("series_count", 1)
+        return 2.6 / (2.6 + .4 * math.ceil(count / 4))
+    if panel.chart_type == "chord":
+        return .85 if panel.chart_options.get("summary") else 1.0
+    if panel.chart_type in THREE_D_CHARTS:
+        return 1.0
+    if panel.chart_type in ROUND_CHARTS:
         return 1.0
     if panel.chart_type in {"heatmap", "confusion"}:
         data = panel.computed_data
@@ -32,13 +41,14 @@ def _preferred_aspect(panel):
         if data is not None and x in data and y in data:
             return min(2.0, max(0.85, data[x].nunique() / max(1, data[y].nunique())))
         return 1.15
-    return {"scatter": 1.25, "box": 1.5}.get(panel.chart_type, 1.75)
+    return {"scatter": 1.25, "box": 1.5, "raincloud": 1.24, "ridgeline": 1.24,
+            "paired": 1.24, "estimation": 1.24}.get(panel.chart_type, 1.75)
 
 
 def _prefers_full_width(panel):
     # A hard aspect is already satisfied by letterboxing the viewport. Its
     # measured ratio alone cannot tell a useful large panel from a small one.
-    return (panel.chart_type == "circular_bar"
+    return (panel.chart_type in {"circular_bar", "chord"}
             or (panel.custom_panel is not None
                 and panel.custom_panel.box_aspect is not None))
 
@@ -178,7 +188,7 @@ def _score(spec, measured):
         target_h = target_w / aspect
         undersized.append(max(0, target_w / zone["w"] - 1) ** 2
                           + max(0, target_h / zone["h"] - 1) ** 2)
-        if panel.chart_type in {"pie", "donut", "radar", "circular_bar"}:
+        if panel.chart_type in ROUND_CHARTS:
             # Compare the actual square viewport with the cell's short side,
             # not its area: circular content cannot fill a wide final-row span.
             fit = min(zone["w"], zone["h"]) / min(cell["w"], cell["h"])
@@ -217,7 +227,7 @@ def _compact_height(spec, measured, cfg):
         if minimum is None:
             if panel.custom_panel is not None:
                 minimum = panel.custom_panel.min_size
-            elif panel.chart_type in {"pie", "donut", "radar", "circular_bar"}:
+            elif panel.chart_type in ROUND_CHARTS:
                 minimum = max(60.0, cfg.min_plot_width), max(60.0, cfg.min_plot_height)
             else:
                 minimum = cfg.min_plot_width, cfg.min_plot_height

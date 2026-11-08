@@ -144,6 +144,32 @@ def resolve_field_options(kind, mapping, options, fields, *, data=None):
             if column in fields and "label" in fields[column]:
                 resolved.setdefault(key, field_label(column, fields, include_unit=False))
         return resolved
+    if kind == "chord":
+        _resolve_value(resolved, mapping.get("value"), fields, label=True)
+        return resolved
+    if kind in {"raincloud", "ridgeline"}:
+        category_axis, value_axis = ("y", "x") if resolved.get("horizontal", True) else ("x", "y")
+        _resolve_axis(resolved, category_axis, mapping.get("x"), fields, numeric=False)
+        _resolve_axis(resolved, value_axis, mapping.get("y"), fields, numeric=True)
+        _resolve_value(resolved, mapping.get("y"), fields, label=True)
+        resolved.setdefault("category_label", field_label(mapping.get("x"), fields))
+        return resolved
+    if kind in {"paired", "estimation"}:
+        _resolve_axis(resolved, "x", mapping.get("x"), fields, numeric=False)
+        _resolve_axis(resolved, "y", mapping.get("y"), fields, numeric=True)
+        _resolve_value(resolved, mapping.get("y"), fields, label=True)
+        return resolved
+    if kind in {"scatter3d", "waterfall3d", "bar3d"}:
+        columns = ({"x": mapping.get("x"), "y": mapping.get("group"), "z": mapping.get("y")}
+                   if kind == "waterfall3d" else
+                   {"x": mapping.get("x"), "y": mapping.get("y"), "z": mapping.get("value")}
+                   if kind == "bar3d" else {axis: mapping.get(axis) for axis in ("x", "y", "z")})
+        for axis, column in columns.items():
+            numeric = kind == "scatter3d" or axis == "z" or (kind == "waterfall3d" and axis == "x")
+            _resolve_axis(resolved, axis, column, fields, numeric=numeric)
+            resolved.setdefault(f"{axis}label", field_label(column, fields))
+        _resolve_value(resolved, columns["z"], fields, label=True)
+        return resolved
     if kind == "histogram":
         _resolve_axis(resolved, "x", mapping.get("x"), fields, numeric=True)
         return resolved

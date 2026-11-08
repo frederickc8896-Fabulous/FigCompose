@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from numbers import Real
 from typing import Any, ClassVar
@@ -37,6 +38,10 @@ def _plain_options(value):
         return value.item()
     if isinstance(value, (tuple, list)):
         return [_plain_options(item) for item in value]
+    if isinstance(value, Mapping):
+        # Normalize values only. Identity/option keys retain their meaning and
+        # remain subject to the chart's existing field validation.
+        return {key: _plain_options(item) for key, item in value.items()}
     return value
 
 

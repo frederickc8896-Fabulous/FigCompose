@@ -1,6 +1,8 @@
 """Render a fixed canvas; measure decorations without tight layout or cropping."""
 from __future__ import annotations
 
+from data_visuals.charts.families import ROUND_CHARTS, AXISLESS_CHARTS, THREE_D_CHARTS, CARTESIAN_CHARTS
+
 from collections import defaultdict
 from collections.abc import Mapping
 from copy import deepcopy
@@ -24,7 +26,7 @@ from data_visuals.renderer.mpl.axes import apply_axis_options, validate_axis_opt
 from data_visuals.renderer.mpl.charts.registry import _BUILDERS
 from data_visuals.renderer.mpl.custom import (
     prepare_custom_panels, position_custom, custom_bounds, place_custom_title,
-    create_panel_axes, position_axes,
+    create_panel_axes, position_axes, projected_axis_label_bounds,
 )
 
 DPI = 72  # One design point is one measurement pixel, independent of export DPI.
@@ -154,8 +156,7 @@ def _shared_legend_blocks(fig, spec, cfg, group_cells, shared, maps, width, padd
         visible = (_series_values((name for sp in chart_cells for name in sp["data"]["y"]),
                                   spec.get("series_order", {}).get(column))
                    if column == "__measures__" else
-                   _series_values((row[column] for sp in chart_cells
-                                   for row in sp.get("computed_data", []) if column in row),
+                   _series_values((value for sp in chart_cells for value in _visible_identities(sp, column)),
                                   spec.get("series_order", {}).get(column)))
         color_map = maps.get(column, {})
         if chart_cells and all(sp["chart"] == "scatter" for sp in chart_cells):
@@ -267,8 +268,7 @@ def _colour_maps(spec, cfg):
     for sp in spec["subplots"]:
         column = sp["data"].get("group")
         if column:
-            domains[column].extend(row[column] for row in sp.get("computed_data", [])
-                                   if column in row and row[column] is not None)
+            domains[column].extend(_visible_identities(sp, column))
         elif isinstance(sp["data"].get("y"), list):
             domains["__measures__"].extend(sp["data"]["y"])
     maps = {}
@@ -445,7 +445,7 @@ def _fit_cell_ticks(ax, zone, box, renderer, cfg, fs, key, width, height, paddin
 def _minimum_plot(sp, cfg, renderer):
     if sp["chart"] == "custom":
         return sp["_custom_panel"].min_size
-    if sp["chart"] in ("pie", "donut", "radar", "circular_bar"):
+    if sp["chart"] in ROUND_CHARTS:
         return max(60.0, cfg.min_plot_width), max(60.0, cfg.min_plot_height)
     if not cfg.physical:
         return max(20.0, sp["font_sizes"]["tick"] * 2)
@@ -471,7 +471,7 @@ def _minimum_plot(sp, cfg, renderer):
 def _share_facet_axes(records, options):
     """Join ranges explicitly, retaining all panels' data when limits are automatic."""
     ordered = [records[key] for key in sorted(records)
-               if records[key]["subplot"]["chart"] not in ("custom", "pie", "donut", "radar", "circular_bar")
+               if records[key]["subplot"]["chart"] not in ROUND_CHARTS | THREE_D_CHARTS | {"custom"}
                and records[key]["axes"].name == "rectilinear"]
     if not ordered:
         return
@@ -555,10 +555,21 @@ class _CompositeLegendGlyph(tuple):
         return self[0].get_label()
 
 
+def _visible_identities(sp, column):
+    """Observed semantic keys, canonicalized without changing graph endpoints."""
+    aliases = sp.get("options", {}).get("category_aliases", {})
+    if sp["chart"] == "chord":
+        values = sp.get("derived_data", {}).get("chord", {}).get("node_order", [])
+    else:
+        values = [row[column] for row in sp.get("computed_data", [])
+                  if column in row and row[column] is not None]
+    return [aliases.get(raw, aliases.get(str(raw), raw)) for raw in values]
+
+
 def _observes(sp, value):
     group = sp["data"].get("group")
     if group:
-        return any(row.get(group) == value for row in sp.get("computed_data", []))
+        return value in _visible_identities(sp, group)
     return value in sp["data"].get("y", [])
 
 
@@ -606,6 +617,8 @@ def _shared_styled_legend(cells, visible, color_map, cfg):
             glyphs.append(lines[0])
         if markers and (not lines or lines[0].get_marker() in (None, "None", "", " ")):
             glyphs.append(markers[0])
+        if not glyphs:
+            raise ValueError(f"Shared legend has no visible glyph for {value!r}")
         handle = glyphs[0] if len(glyphs) == 1 else _CompositeLegendGlyph(glyphs)
         handle._figcompose_legend_key = value
         handles.append(handle)
@@ -716,8 +729,11 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
         validate_axis_options(sp["chart"], sp.get("options", {}))
     facet_options = d.get("facets", {})
     if (facet_options and (facet_options.get("sharex") or facet_options.get("sharey"))
-            and any(sp["chart"] in ("pie", "donut", "radar", "circular_bar") for sp in subplots)):
+            and any(sp["chart"] in ROUND_CHARTS for sp in subplots)):
         raise ValueError("Round chart facets cannot share Cartesian axes; set facets.sharex/sharey=False")
+    if (facet_options and (facet_options.get("sharex") or facet_options.get("sharey"))
+            and any(sp["chart"] in THREE_D_CHARTS for sp in subplots)):
+        raise ValueError("3D chart facets cannot share Cartesian axes; set facets.sharex/sharey=False")
     if facet_options:
         for sp in subplots:
             sp["font_sizes"] = {key: max(8.0, value) for key, value in sp["font_sizes"].items()}
@@ -800,7 +816,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
         initial = {"left": fs["axis_label"] * 1.5, "right": fs["tick"] * 0.8,
                    "top": fs["title"] * 1.6 if sp.get("title") else 2.0,
                    "bottom": fs["axis_label"] * 1.5}
-        if (custom and custom["panel"].axes == "off") or sp["chart"] in ("pie", "donut", "circular_bar"):
+        if (custom and custom["panel"].axes == "off") or sp["chart"] in AXISLESS_CHARTS:
             initial.update(left=2.0, right=2.0, bottom=2.0)
         if facet:
             initial["right"] = 2.0
@@ -835,7 +851,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
         y_label = sp["data"].get("y", "")
         if isinstance(y_label, list):
             y_label = " / ".join(y_label)
-        cartesian = not custom and sp["chart"] not in ("pie", "donut", "radar", "circular_bar")
+        cartesian = not custom and sp["chart"] not in ROUND_CHARTS | THREE_D_CHARTS
         if cartesian:
             ax.set_xlabel(labels.get("x", sp["data"].get("x", "")), labelpad=cfg.axis_title_padding)
             ax.set_ylabel(labels.get("y", y_label), labelpad=cfg.axis_title_padding)
@@ -852,7 +868,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
             # Cartesian grids. Keep angular metric names at publication size.
             ax.tick_params(axis="both", labelsize=max(8.0, fs["tick"]))
             ax.grid(True, color=cfg.axis_grid_color, alpha=max(.35, cfg.grid_opacity), linewidth=.5)
-        if (custom and custom["panel"].axes == "off") or sp["chart"] in ("pie", "donut", "circular_bar"):
+        if (custom and custom["panel"].axes == "off") or sp["chart"] in AXISLESS_CHARTS:
             ax.set_axis_off()
             ax.grid(False)
         for extra in secondary:
@@ -924,7 +940,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
         alignment_groups = {}
         for key, record in records.items():
             kind = record["subplot"]["chart"]
-            family = ("cartesian" if kind in ("bar", "line", "scatter", "box", "histogram")
+            family = ("cartesian" if kind in CARTESIAN_CHARTS
                       else "matrix" if kind in ("heatmap", "confusion")
                       else ("custom", key) if kind == "custom" else kind)
             alignment_groups[key] = family
@@ -956,13 +972,15 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
                     error.required_width = record["box"]["w"] + max(0, (error.required_width or zone["w"]) - zone["w"])
                     error.required_height = record["box"]["h"] + max(0, (error.required_height or zone["h"]) - zone["h"])
                     raise _canvas_error(error, record["box"], key, width, height, padding, hint_header, hint_side) from None
-            elif record["subplot"]["chart"] in ("pie", "donut", "radar", "circular_bar"):
+            elif record["subplot"]["chart"] in ROUND_CHARTS | THREE_D_CHARTS:
                 allocation = zone
                 zone = position_axes(record["axes"], zone, width, height)
                 min_w, min_h = record["minimum"]
                 if zone["w"] < min_w - .01 or zone["h"] < min_h - .01:
                     error = LayoutError(
-                        "Round panels need at least 60 pt of actual content space; increase canvas size.",
+                        ("3D panels need their declared minimum actual viewport; increase canvas size."
+                         if record["subplot"]["chart"] in THREE_D_CHARTS else
+                         "Round panels need at least 60 pt of actual content space; increase canvas size."),
                         axis="width" if allocation["w"] < min_w else "height",
                         required_width=record["box"]["w"] + max(0, min_w-zone["w"]),
                         required_height=record["box"]["h"] + max(0, min_h-zone["h"]), subplot=key)
@@ -993,7 +1011,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
                 cb = {"x": zone["x"] + zone["w"] + fs["tick"] * 0.6, "y": zone["y"],
                       "w": fs["tick"] * 0.7, "h": zone["h"]}
                 extra.set_position(_frac_box(cb, width, height))
-            if record["custom"] or record["subplot"]["chart"] in ("radar", "circular_bar"):
+            if record["custom"] or record["subplot"]["chart"] in ROUND_CHARTS | THREE_D_CHARTS:
                 place_custom_title(record, renderer, cfg, height)
             record["local_artists"] = _place_local_legend(record, renderer, width, height)
         fig.canvas.draw()
@@ -1003,6 +1021,8 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
             bboxes = [item.get_tightbbox(renderer, for_layout_only=True) for item in
                       [record["axes"]] + record["secondary_axes"] + record["colorbar_axes"]]
             bboxes.extend(custom_bounds(record["custom"], renderer))
+            if record["custom"] is None:
+                bboxes.extend(projected_axis_label_bounds(record["axes"], renderer))
             bboxes.extend(artist.get_window_extent(renderer) for artist in record["local_artists"])
             bbox = Bbox.union([bb for bb in bboxes if bb is not None])
             pad = max(2.0, fs["tick"] * cfg.panel_padding)
@@ -1018,6 +1038,8 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
             full_boxes = [item.get_tightbbox(renderer) for item in
                           [record["axes"]] + record["secondary_axes"] + record["colorbar_axes"]]
             full_boxes.extend(custom_bounds(record["custom"], renderer))
+            if record["custom"] is None:
+                full_boxes.extend(projected_axis_label_bounds(record["axes"], renderer))
             full_boxes.extend(artist.get_window_extent(renderer) for artist in record["local_artists"])
             record["decoration_bbox"] = tuple(Bbox.union([bb for bb in full_boxes if bb is not None]).bounds)
         if not changed:

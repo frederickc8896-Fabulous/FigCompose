@@ -65,6 +65,11 @@ def _draw_circular_bar(ax, sp, cfg, color_map):
     low, high = map(float, opts.get("value_range", (0, 100)))
     rounded = opts.get("rounded", True)
     count, series_count = len(objects), len(groups)
+    position = opts.get("summary_position", "auto")
+    top_summary = opts.get("summary") == "mean" and (position == "top" or (position == "auto" and cfg.showcase))
+    header_rows = math.ceil(series_count / 4) if top_summary else 0
+    plot_extent = 1.30 if top_summary else EXTENT
+    header_extra = .40 * header_rows
     pitch = (OUTER - INNER) / count
     band = .75 * pitch
     sector = 360.0 / series_count
@@ -74,7 +79,7 @@ def _draw_circular_bar(ax, sp, cfg, color_map):
     ink = cfg.text_color
     muted = cfg.muted_text_color
     background_marks, data_marks, rules = [], [], []
-    text_artists, ids, labels, ticks, handles = [], [], [], [], []
+    text_artists, ids, labels, ticks, handles, header_items = [], [], [], [], [], []
     formatter = numeric_format_function(opts.get("value_format", ".1f"), "value_format")
     tick_format = (numeric_format_function(opts["value_format"], "value_format")
                    if opts.get("value_format") else lambda value: f"{value:g}")
@@ -85,8 +90,8 @@ def _draw_circular_bar(ax, sp, cfg, color_map):
         text_artists.append(artist)
         return artist
 
-    ax.set_xlim(-EXTENT, EXTENT)
-    ax.set_ylim(-EXTENT, EXTENT)
+    ax.set_xlim(-plot_extent, plot_extent)
+    ax.set_ylim(-plot_extent, plot_extent + header_extra)
     ax.set_aspect("equal", adjustable="box")
     ax.set_axis_off()
     ax.grid(False)
@@ -117,13 +122,33 @@ def _draw_circular_bar(ax, sp, cfg, color_map):
 
         name = text(display, ha="center", va="center", fontweight=cfg.cell_title_weight)
         summary = None
-        if opts.get("summary") == "mean":
+        if opts.get("summary") == "mean" and not top_summary:
             if key not in summaries:
                 raise ValueError("Circular mean summaries must be supplied by the compute layer.")
             summary = text(f"Mean {formatter(summaries[key])}", ha="center", va="center",
                            fontstyle="italic")
             summary.set_color(cfg.annotation_color(color))
         labels.append((name, summary, centre_angle, display))
+        if top_summary:
+            if key not in summaries:
+                raise ValueError("Circular mean summaries must be supplied by the compute layer.")
+            columns = min(4, series_count)
+            row, column_index = divmod(column, columns)
+            x0 = -plot_extent + (column_index + .5) * (2 * plot_extent / columns)
+            y0 = plot_extent + header_extra - .04 - row * .40
+            heading = text(display, ha="center", va="center", fontweight=cfg.cell_title_weight)
+            heading.set_fontsize(max(8.0, sp["font_sizes"]["axis_label"]))
+            value = text(formatter(summaries[key]), ha="center", va="center", fontweight="bold")
+            value.set_fontsize(max(12.0, sp["font_sizes"]["axis_label"] * (3 if cfg.showcase else 1.8)))
+            caption = text(f"Mean · {tick_format(low)}–{tick_format(high)}", ha="center", va="center")
+            caption.set_fontsize(max(8.0, sp["font_sizes"]["tick"]))
+            caption.set_color(muted)
+            half = (2 * plot_extent / columns) * .34
+            support_line, = ax.plot([x0 - half, x0 + half], [y0] * 2,
+                                   color=cfg.support_fill(color), linewidth=3, solid_capstyle="butt", zorder=3)
+            value_line, = ax.plot([x0 - half, x0 - half + 2 * half * _fraction(summaries[key], low, high)],
+                                 [y0] * 2, color=color, linewidth=3, solid_capstyle="butt", zorder=4)
+            header_items.append((heading, value, caption, support_line, value_line, x0, y0, display, columns))
         handle = Patch(facecolor=color, edgecolor="none", label=display)
         handle._figcompose_legend_key = key
         handles.append(handle)
@@ -162,11 +187,25 @@ def _draw_circular_bar(ax, sp, cfg, color_map):
         ax.apply_aspect()
         renderer = ax.figure.canvas.get_renderer()
         box = ax.get_window_extent(renderer)
-        scale_pt = min(box.width, box.height) * 72 / ax.figure.dpi / (2 * EXTENT)
+        scale_pt = min(box.width / (2 * plot_extent), box.height / (2 * plot_extent + header_extra)) * 72 / ax.figure.dpi
         prop = FontProperties(family=cfg.font_family, size=size)
 
         def width(value):
             return renderer.get_text_width_height_descent(value, prop, ismath=False)[0] * 72 / ax.figure.dpi
+
+        for heading, value, caption, support_line, value_line, x0, y0, display, columns in header_items:
+            available = (2 * plot_extent / columns) * scale_pt * .88
+            characters = max(4, int(available / (heading.get_fontsize() * .46)))
+            heading.set_text(textwrap.fill(str(display), width=characters,
+                                           break_long_words=False, break_on_hyphens=False))
+            cursor = y0
+            for artist in (heading, value, caption):
+                height_pt = artist.get_window_extent(renderer).height * 72 / ax.figure.dpi
+                artist.set_position((x0, cursor - height_pt / (2 * scale_pt)))
+                cursor -= (height_pt + 2) / scale_pt
+            cursor -= 3 / scale_pt
+            support_line.set_ydata([cursor] * 2)
+            value_line.set_ydata([cursor] * 2)
 
         stride = max(1, math.ceil((size + 1.5) / (pitch * scale_pt)))
         visible_ids = []

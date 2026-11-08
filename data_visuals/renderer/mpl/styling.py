@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from matplotlib.colors import to_rgba
+from data_visuals.charts.families import THREE_D_CHARTS
+
 
 def style_axis(ax, fs, cfg, secondary=False, chart_type=None):
     """Apply physical typography without undoing chart-specific decorations.
@@ -25,6 +28,14 @@ def style_axis(ax, fs, cfg, secondary=False, chart_type=None):
         for axis in ax._axis_map.values():
             axis.line.set_color(cfg.axis_domain_color)
             axis.line.set_linewidth(cfg.axis_domain_width)
+            if chart_type in THREE_D_CHARTS:
+                axis.pane.set_facecolor(to_rgba(cfg.axis_grid_color, .12))
+                axis.pane.set_edgecolor(to_rgba(cfg.axis_domain_color, .3))
+                # Isolate the native 3D grid adapter; Cartesian/custom axes
+                # keep their existing contracts and styling ownership.
+                grid = getattr(axis, "_axinfo", {}).get("grid")
+                if isinstance(grid, dict):
+                    grid.update(color=to_rgba(cfg.axis_grid_color, .32), linewidth=.45)
     elif secondary:
         ax.grid(False, which="both")
     elif chart_type in ("heatmap", "confusion"):
