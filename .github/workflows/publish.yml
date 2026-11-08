@@ -216,6 +216,14 @@ jobs:
           print(f"Installed package verified: {installed}")
           PY
 
+      - name: Verify all native chart kinds and showcase outside the checkout
+        env:
+          MPLBACKEND: Agg
+        run: |
+          cd "$RUNNER_TEMP"
+          python -I "$GITHUB_WORKSPACE/.github/scripts/native_smoke.py" \
+            --checkout "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/figcompose-native-smoke"
+
       - name: Verify public examples outside the checkout
         env:
           MPLBACKEND: Agg
@@ -254,8 +262,8 @@ jobs:
           assert 'site-packages' in installed.parts, installed
           assert not installed.is_relative_to(checkout), installed
           assert not any(Path(item).resolve().is_relative_to(checkout) for item in sys.path if item)
-          script, destination = sys.argv[1:]
-          sys.argv = [script, '--out', destination]
+          script, destination, *extra = sys.argv[1:]
+          sys.argv = [script, '--out', destination, *extra]
           runpy.run_path(script, run_name='__main__')
           assert Path(data_visuals.__file__).resolve() == installed
           assert not any(Path(item).resolve().is_relative_to(checkout) for item in sys.path if item)
@@ -282,6 +290,22 @@ jobs:
                   assert (output / "preview.png").is_file()
                   completed.append(name)
                   print(f"Public example verified: {name}", flush=True)
+              # Keep the original supplied-bound interval entry above, and also
+              # check the six-native overview without exporting six singles.
+              series_output = destination / "outputs" / "intervals_series"
+              subprocess.run(
+                  [sys.executable, "-I", "-c", probe,
+                   str(copied / "intervals" / "generate_series.py"), str(series_output),
+                   "--view", "overview"],
+                  cwd=destination, check=True, timeout=180,
+              )
+              assert (series_output / "figure.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+              assert "<svg" in (series_output / "figure.svg").read_text(encoding="utf-8")
+              assert (series_output / "preview.png").is_file()
+              assert not any((series_output / name).is_dir() for name in
+                             ("boxplot", "raincloud", "ridgeline", "paired", "estimation", "forest"))
+              completed.append("intervals_series_overview")
+              print("Public example verified: intervals_series_overview", flush=True)
               print(json.dumps({"installed": str(installed), "examples": completed}))
           PY
 
