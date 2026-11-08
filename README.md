@@ -38,7 +38,8 @@ python -m pip install FigCompose
 ```
 
 The package is named **FigCompose**; Python imports use `data_visuals`.
-**FigCompose 0.1.2** includes the circular-bar chart and all 13 palettes shown here. Upgrade older installations with `python -m pip install --upgrade FigCompose`.
+**FigCompose 0.2.0** includes **19 native chart types**, all 13 curated palettes and the `showcase` presentation style. Upgrade older installations with `python -m pip install --upgrade FigCompose`.
+The hero image above demonstrates 11 chart types; distribution, paired-data, chord and 3D charts are also available in 0.2.0.
 The default font is **Times New Roman**, supplied by your system; other serif fonts are used as fallbacks.
 
 <details>
@@ -113,6 +114,7 @@ For everyday use, focus on these settings:
 Use `cols=2` to limit panels per row. Shared legends default to below the main title and above the panels; position, columns and font size remain adjustable.
 For proportions, `.0%` displays 0–1 as percentages; use `{x:.0f}%` for values already on a 0–100 scale.
 A fixed width and height will not silently shrink fonts; if the content cannot fit, you are prompted to adjust the dimensions.
+`style="showcase"` selects larger presentation typography through the same style API. Explicit `FigureConfig.font_sizes` overrides win; palette hex values and category order stay unchanged.
 
 ### Ask AI to write the call
 
@@ -124,18 +126,20 @@ For more complex settings, give your assistant the [API reference](https://githu
 
 ## Ready-to-run examples
 
-Download or clone the repository, install FigCompose 0.1.2+, and run a complete example. Each folder includes its actual CSV, saved style, code and expected image.
+Download or clone the example folders, install `FigCompose>=0.2.0`, and run a complete example. Each folder includes its actual CSV, saved style, code and expected image.
 
 | Start here | What you can reproduce |
 |---|---|
 | [Mixed figure](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/mixed_figure) | Four charts with stable method identities across two CSVs |
-| [Differences and intervals](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/intervals) | Paired estimates, confidence intervals and supplied asymmetric bounds |
+| [Differences and intervals](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/intervals) | Six native statistical views, with explicit paired estimates and supplied asymmetric bounds |
 | [Concentric scores](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/circular_scores) | The native circular-bar chart, with 40 scores and independent scales |
 
 Run, for example, `python examples/circular_scores/generate.py --out output/circular`.
-[Browse all eight examples](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md), including ready-made custom templates for participant tracks, circular clustering, 2D/3D comparisons, chord diagrams and alluvial flows.
+[Browse all eight examples](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md), including native 2D/3D comparisons and chords, plus custom templates for participant tracks, circular clustering and alluvial flows.
 
 ## Supported charts
+
+FigCompose 0.2.0 supports the following 19 native `kind` values.
 
 | Chart | `kind` | Common uses |
 |---|---|---|
@@ -149,9 +153,16 @@ Run, for example, `python examples/circular_scores/generate.py --out output/circ
 | Pie / donut | `pie` / `donut` | Category shares |
 | Radar | `radar` | Comparing profiles across metrics |
 | Concentric circular bars | `circular_bar` | Independent metric scores for multiple objects and group means |
+| Raincloud / ridgeline | `raincloud` / `ridgeline` | Raw observations, distribution shapes and descriptive summaries |
+| Paired / estimation | `paired` / `estimation` | Matched observations; supplied or explicitly requested uncertainty |
+| Weighted chords | `chord` | Undirected pair weights on one endpoint-width scale |
+| 3D scatter | `scatter3d` | Measured X/Y/Z points and explicitly selected projection planes |
+| 3D waterfall | `waterfall3d` | Ordered series in depth, with a declared baseline |
+| 3D bars | `bar3d` | Complete category grids and explicit component stacks |
 
 For repeated observations, bars, lines, radar plots and heatmaps default to means within their respective groups. Pie and donut charts sum values by category, or count rows when the value column is omitted; scatter plots retain observations.
 Circular bars use independent score scales rather than shares of a total. Repeated object/metric pairs require an explicit aggregation choice.
+Distribution shape is not a confidence interval. Paired charts require explicit pair identities and two-level order; estimation requires supplied bounds or an explicit `ci_method="paired_t"` and `confidence`. Units and percentage scales are never guessed.
 See the [API reference](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/REFERENCE.md) for statistical definitions, data formats and custom Matplotlib panel examples.
 
 ## One configuration for an entire paper

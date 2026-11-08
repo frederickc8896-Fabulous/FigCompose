@@ -38,7 +38,8 @@ python -m pip install FigCompose
 ```
 
 包名为 **FigCompose**，Python 导入使用 `data_visuals`。
-**FigCompose 0.1.2** 已包含同心环条图和这里展示的全部 13 套配色。旧安装可用 `python -m pip install --upgrade FigCompose` 更新。
+**FigCompose 0.2.0** 已包含 **19 种原生图表**、全部 13 套精选配色及 `showcase` 展示风格。旧安装可用 `python -m pip install --upgrade FigCompose` 更新。
+上方首屏组图实际展示 11 种图表；0.2.0 还支持分布、配对、弦图与三维图。
 默认字体为 **Times New Roman**，由系统提供；缺少时回退其他衬线字体。
 
 <details>
@@ -113,6 +114,7 @@ fig.render("figure.png", dpi=300)
 需要时可用 `cols=2` 限制每行子图数。共享图例默认在主标题下方、子图上方，也可调整位置、列数和字号。
 比例数据的 `.0%` 将 0–1 显示为百分比；已经是 0–100 的数据用 `{x:.0f}%`。
 固定宽高时不会自动缩小字号；内容装不下会提示调整尺寸。
+通过既有风格入口使用 `style="showcase"`，选择较大的展示字号；显式 `FigureConfig.font_sizes` 优先，配色色号与类别顺序保持不变。
 
 ### 用 AI 帮你写调用
 
@@ -124,18 +126,20 @@ fig.render("figure.png", dpi=300)
 
 ## 可直接复现的示例
 
-下载或克隆仓库，安装 FigCompose 0.1.2+，即可运行完整示例。每个目录包含实际 CSV、风格配置、脚本和预期成图。
+下载或克隆示例目录，安装 `FigCompose>=0.2.0` 后即可运行完整示例。每个目录包含实际 CSV、风格配置、脚本和预期成图。
 
 | 从这里开始 | 可以复现什么 |
 |---|---|
 | [四图组合](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/mixed_figure) | 两份 CSV，四类图表，缺席方法保持原有颜色与点形 |
-| [差值与区间](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/intervals) | 配对估计、置信区间与给定的非对称边界 |
+| [差值与区间](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/intervals) | 六种原生统计视角、显式配对估计与给定的非对称边界 |
 | [同心环条](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/circular_scores) | 原生环条图，40 个分数，各指标使用独立量尺 |
 
 例如运行 `python examples/circular_scores/generate.py --out output/circular`。
-[查看全部八个示例](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md)，另有环形多轨、环形聚类、二维三维对照、弦图和桑基流图的现成自定义模板。
+[查看全部八个示例](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md)，另有原生二维三维对照、原生弦图，以及环形多轨、环形聚类和桑基流图的现成自定义模板。
 
 ## 支持哪些图
+
+FigCompose 0.2.0 支持下列 19 个原生 `kind` 值。
 
 | 图种 | `kind` | 常见用法 |
 |---|---|---|
@@ -149,9 +153,16 @@ fig.render("figure.png", dpi=300)
 | 饼图 / 环形图 | `pie` / `donut` | 类别份额 |
 | 雷达图 | `radar` | 多指标轮廓比较 |
 | 同心环条图 | `circular_bar` | 多对象的独立指标评分与分组均值 |
+| 雨云图 / 山脊图 | `raincloud` / `ridgeline` | 原始观测、分布形状与描述性摘要 |
+| 配对连线 / 配对估计 | `paired` / `estimation` | 匹配观测；给定或显式请求的不确定性区间 |
+| 加权弦图 | `chord` | 无向对象对权重，两端使用同一角宽量尺 |
+| 三维散点 | `scatter3d` | 实测 X/Y/Z 坐标与显式指定的投影平面 |
+| 三维瀑布曲线 | `waterfall3d` | 按系列顺序排列的深度轴，基线明确声明 |
+| 三维柱图 | `bar3d` | 完整类别网格与显式分项堆叠 |
 
 有重复观测时，柱图、折线、雷达及热力图默认按对应分组取均值；饼图与环形图按类别求和，省略数值列时计数；散点图保留观测。
 环条图使用独立分数量尺，表示的不是总量中的份额；重复对象/指标组合需明确指定汇总方式。
+分布形状不表示置信区间。配对图需明确对象身份与两个水平的顺序；估计图需给定边界，或显式声明 `ci_method="paired_t"` 与 `confidence`。不猜测单位或百分比量尺。
 更多统计口径、数据格式及自定义 Matplotlib 面板示例见[接口参考](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/REFERENCE.md)。
 
 ## 整篇论文复用一份配置

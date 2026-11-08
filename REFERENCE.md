@@ -1,264 +1,197 @@
-# FigCompose usage reference
+# FigCompose reference
 
-[English overview](README.md) · [中文概览](README.zh-CN.md)
+[English overview](README.md) · [中文概览](README.zh-CN.md) · [Runnable examples](examples/README.md)
 
-This reference is for advanced use and for supplying precise API context to a coding assistant.
-Start with the README for installation and a first figure.
-The project is in Alpha; the Python import path is `data_visuals`.
-FigCompose 0.1.2 includes `circular_bar` and the `curated-8-rose-blue` palette.
-Upgrade older installations with `python -m pip install --upgrade FigCompose`.
+Import from `data_visuals`. **FigCompose 0.2.0** provides **19 native kinds**,
+`showcase` and circular summary placement. Install or upgrade with
+`python -m pip install --upgrade "FigCompose>=0.2.0"`.
 
-[Data and chart behavior](#data-and-chart-behavior) · [Paper configuration](#paper-configuration) · [Canvas and axes](#canvas-and-axes) · [Legends](#legends) · [Circular bars](#circular-bars) · [Figure checks](#figure-checks-and-layout-snapshots) · [Custom panels](#custom-matplotlib-panels)
+[Customization](#defaults-and-customization) · [Charts](#data-and-chart-behavior) · [Configuration](#paper-configuration) · [Canvas](#canvas-and-axes) · [Legends](#legends) · [Advanced charts](#advanced-chart-options) · [Checks](#figure-checks-and-layout-snapshots)
+
+## Defaults and customization
+
+The 13 delivered figures are example compositions, not locked appearances.
+Native kinds provide drawing and measurement rules; configuration supplies editable defaults.
+
+| Control | Setting |
+|---|---|
+| Overall style | `plot(style=...)`: `general`, `modern`, `showcase`; config uses `theme` |
+| Palette | `palette="curated-5-warm"`; `list_color_presets()` lists presets |
+| Individual series colors | `series[group][...].color`, `category_colors`, panel `series_styles` |
+| Font and physical sizes | `FigureConfig.font_family` and `font_sizes` |
+| Size and composition | `canvas`, `cols`; advanced `Figure` layout and width/height ratios |
+| Axes and legends | `chart_opts`, figure `legend` and panel legend overrides |
+| Chart-specific appearance | Supported options such as orientation, summaries, markers or 3D camera |
+
+Explicit settings override applicable defaults. Category color precedence is
+**palette → `series.color` → `category_colors` → panel `series_styles`**.
+All four example profiles pin colors: changing only `palette` will not replace them.
+Edit or remove the explicit color entries; for the interval series, check both
+`series` and `category_colors`. Explicit fonts, sizes and panel legend settings also override themes.
+Some builders specify canvas/layout directly (03, 05, 06); edit those declarations for a different
+composition. Internal geometry is governed by each kind's supported options.
 
 ## Data and chart behavior
 
-`plot(data, x=..., group=..., plots=[...])` accepts a DataFrame or a CSV path with a header row.
-Each entry in `plots` describes one panel; `cols=2` allows at most two panels per row.
-Figure-level `x` and `group` provide defaults; panels can override them, including `group=None`.
-CSV reading options go through `csv_options`, for example `{"encoding": "utf-8-sig", "delimiter": ","}`.
-`where` filters observations before aggregation.
+`plot(data, plots=[...], x=..., group=..., cols=2)` accepts a DataFrame or headed CSV.
+Each declaration is one panel. Panel fields override figure defaults; `group=None` disables grouping.
+`where={"condition": 4}` filters before computation. CSV options go through `csv_options`.
 
-| Chart | `kind` | Main fields | Default computation |
-|---|---|---|---|
-| Bar | `bar` | `x`, `metric`, optional `group/error` | Group means; supports error bars and stacking |
-| Line | `line` | `x`, `metric`, optional `group` | Mean of repeated X observations |
-| Scatter | `scatter` | `x`, `metric`, optional `group/size` | Retains observations; accepts precomputed intervals |
-| Box | `box` | `x`, `metric`, optional `group` | Grouped distributions |
-| Histogram | `histogram` | `metric`, optional `group` | Binning; optional density and cumulative curves |
-| Heatmap | `heatmap` | `x`, `y`, `metric` | Means grouped along two dimensions |
-| Confusion matrix | `confusion` | `x`, `y`, optional `metric` | Counts or sums supplied quantities; optional row normalization |
-| Pie / donut | `pie` / `donut` | `group`, optional `metric` | Category sums; counts rows if the value column is omitted |
-| Radar | `radar` | `x`, `metric`, optional `group` | Mean of repeated observations; at least three complete metric axes |
-| Circular bars | `circular_bar` | `x` object ID, `group` metric, `metric` score | Independent score scales; duplicate pairs require explicit aggregation |
+| `kind` | Fields in a plot declaration | Computation / meaning |
+|---|---|---|
+| `bar` | `x`, `metric`, optional `group/error` | Group means; stacking and error bars |
+| `line` | `x`, `metric`, optional `group` | Mean of repeated X observations |
+| `scatter` | `x`, `metric`, optional `group/size` | Raw observations; supplied intervals supported |
+| `box` | `x`, `metric`, optional `group` | Quartiles, whiskers and outliers |
+| `histogram` | `metric`, optional `group` | Bins; optional density/cumulative curves |
+| `heatmap` | `x`, `y`, `metric` | Cell means |
+| `confusion` | `x`, `y`, optional `metric` | Counts or sums; optional row normalization |
+| `pie` / `donut` | `group`, optional `metric` | Sums; counts rows when value is omitted |
+| `radar` | `x` metric name, `metric` score, optional `group` | Means; at least three complete axes |
+| `circular_bar` | `x` object ID, `group` metric, `metric` score | Independent score scales |
+| `chord` | `source`, `target`, `metric` weight | Undirected weighted pairs |
+| `raincloud` / `ridgeline` | `x` category, `metric`, optional `group` | KDE and complete observations |
+| `paired` / `estimation` | `pair` ID, `x` level, `metric`, optional `group` | Matched observations; see CI contract below |
+| `scatter3d` | Explicit `x`, `y`, `z`, optional `group` | Three measured coordinates |
+| `waterfall3d` | `x` position, `metric`, `group`, `baseline` | Series index supplies depth |
+| `bar3d` | `x`, `y` categories, `metric` amount, optional `group` | Complete grid; explicit stacks |
 
-`metric` selects Y values for ordinary charts and radar plots, distribution values for histograms,
-and quantities or color values for matrix and pie charts.
-Pie shares must be finite and nonnegative, with a positive total.
-Radar uses long-form data and does not normalize values or fill missing metrics automatically.
-Choose the statistical definition and axis ranges appropriate to the scientific question.
+`metric` maps to `y` for ordinary/value charts, `x` for histograms, and `value` for
+matrix, pie, chord and 3D-bar charts. Map all three `scatter3d` coordinates explicitly.
+Pie values must be finite, nonnegative and have a positive total. Radar does not normalize
+scores or fill missing axes. Units, pairing and statistical definitions are never inferred.
 
 ## Paper configuration
 
-Pass a `FigureConfig` through `plot(..., config=paper)` or `Figure(config=paper)`.
-Save it with `paper.save("paper.yaml")` and restore it with `FigureConfig.load("paper.yaml")`.
-JSON and YAML are supported; unknown fields raise errors. Use YAML for numeric dictionary keys;
-JSON export rejects configurations whose key types could change.
+Save/load a `FigureConfig` as YAML or JSON and reuse it across figures. Register the complete series
+domain, including IDs absent from a particular CSV, to preserve colors, markers, line styles and order.
 
-### Fields
+```python
+from data_visuals import FigureConfig, plot
 
-`fields` is keyed by original column names. Each entry accepts `label`, `unit` and `format`.
-The original CSV column names and values remain unchanged.
+paper = FigureConfig(
+    theme="showcase", palette="curated-5-warm",
+    font_family="Times New Roman", font_sizes={"main_title": 18, "tick": 8},
+    canvas={"width": 180},
+    series={"method": [
+        {"id": "A", "label": "Method A", "color": "#eb5e28", "marker": "o"},
+        {"id": "B", "label": "Method B", "color": "#37718e", "marker": "D"},
+    ]},
+)
+paper.save("paper.yaml")  # Restore with FigureConfig.load("paper.yaml")
+fig = plot("scores.csv", config=paper, x="dataset", group="method",
+           plots=[{"kind": "bar", "metric": "score"}])
+fig.render("figure.svg")
+```
 
-| Setting | Meaning |
-|---|---|
-| `label` | Axis labels and automatic panel titles |
-| `unit` | Appended to the axis label; does not rescale data |
-| `format=".0%"` | Displays 0–1 values as percentages |
-| `format="{x:.0f}%"` | Adds a percent sign to values already on a 0–100 scale |
+`fields={"score": {"label": "Accuracy", "unit": "%", "format": ".0%"}}` supplies
+display metadata without renaming or rescaling columns. `.0%` multiplies fractions by 100;
+`{x:.0f}%` only appends `%`. Conflicting units/formats on a shared axis need an explicit override.
+Normalized confusion matrices and percent stacks do not inherit raw value units.
 
-Matrix value formats also apply to colorbars and annotations; a local `fmt` overrides only annotations.
-Normalized confusion matrices and percentage-stacked charts do not inherit the original value units.
-If several metrics on one axis declare incompatible units or formats, override explicitly or separate the axes.
-
-### Series identity
-
-`series` is keyed by the `group` column, for example
-`series={"model": [{"id": "base", "label": "Baseline", "marker": "o", "linestyle": "--"}, ...]}`.
-Its list order assigns positions in the original palette; optional `color` fixes an explicit color.
-Lines, scatter and radar reuse `marker`; lines and radar reuse `linestyle`.
-A series missing from another CSV retains its palette position, while legends show only present series.
-
-Register the complete set for the grouping column. Palette capacity includes absent registered series.
-When the grouping column is used, unknown IDs, null values and boolean IDs raise errors.
-Original IDs and display names are separate; names such as `ours` do not receive automatic styling.
-Unused fields and series do not participate in the current figure's computation.
-
-### Overrides and colors
-
-The precedence is theme defaults → paper configuration → figure call → panel `chart_opts`.
-Existing `category_colors` override registered colors; panel `series_styles` can override them further.
-`plot()` uses `style`; the corresponding configuration field is `FigureConfig.theme`.
-Supported styles are `general` and `modern`; `palette` selects colors independently.
-
-Use a complete preset name, such as `curated-5-warm`; `list_color_presets()` lists all names.
-The number in the name indicates category capacity. Preset hex values and order are preserved.
-`curated-8-rose-blue` has `#D79AB7` as its third swatch and stored main color;
-category assignment still follows the original order rather than automatically assigning this color to a named method.
-Matrix plots use a continuous scale paired with the preset; override with
-`chart_opts={"color_scheme": "blues"}` when needed.
+Series palette slots include absent registered IDs. Unknown IDs, nulls and boolean IDs are rejected.
+Preset hex values/order are preserved; method names receive no special treatment.
+Use YAML for numeric dictionary keys; JSON configuration export rejects ambiguous key conversion.
 
 ## Canvas and axes
 
-`canvas` describes the entire figure. Its default width is 180 mm; `unit="in"` selects inches.
-Omit `height` to measure content and solve height automatically.
-`canvas={"width": 180, "height": 110}` fixes both dimensions; content that cannot fit raises `LayoutError`.
-Fixed canvases are not silently enlarged and fonts are not silently reduced.
-PNG DPI changes pixel density rather than physical dimensions or layout.
+`canvas` is the whole figure, in mm by default (`unit="in"` is supported).
+Default width is 180 mm; omitted height is measured and solved. Fixed width/height cannot silently
+grow or shrink fonts: insufficient space raises `LayoutError`. PNG DPI only changes pixel density.
 
-Default physical font sizes are 11 pt for the main title, 9 for panel titles, 8 for axis labels,
-7 for ticks and 8 for legends. Times New Roman is requested from the operating system;
-missing fonts fall back to other serif fonts. Precise cross-device reproduction requires matching fonts and dependencies.
+Physical defaults in pt are main title/panel title/axis label/tick/legend:
+**11/9/8/7/8** for paper styles, **22/11/9/8/10** for `showcase`.
+Override roles through `font_sizes`; explicit legend sizes take priority for legends.
+The default font is Times New Roman, with a serif fallback when unavailable.
 
-In the current source version, `FigureConfig(font_sizes={"main_title": 16})` overrides
-individual roles in pt; supported keys are `main_title`, `title` (panel title),
-`axis_label`, `tick` and `legend`. Unspecified roles retain their defaults, including
-the legacy sizing path. Save these settings in the same paper YAML/JSON profile.
-`legend.fontsize` and panel legend overrides take precedence over `font_sizes.legend`.
-Explicit sizes participate in layout measurement; they do not scale with the canvas or DPI.
-
-Bar, line, scatter, box and histogram share these `chart_opts`:
-
-| Option | Example or meaning |
+| Axis option in `chart_opts` | Purpose |
 |---|---|
-| `xlabel` / `ylabel` | Display labels; an empty string hides the label |
-| `xlim` / `ylim` | `[0, 100]`; fixed or reversed limits |
-| `xticks` / `yticks` | `[0, 25, 50, 75, 100]`; fixed positions |
-| `xticklabels` / `yticklabels` | Display strings matching the corresponding tick count |
-| `xformat` / `yformat` | `".2f"`, `".0%"` or `"{x:.0f}%"`; percentage meanings are as above |
-| `xscale` / `yscale` | `"linear"`, `"log"`, `"symlog"`; categorical axes remain linear |
+| `xlabel`, `ylabel` | Display titles; `""` hides a title |
+| `xlim`, `ylim` | Fixed or reversed ranges |
+| `xticks`, `yticks` | Fixed tick positions |
+| `xticklabels`, `yticklabels` | Strings matching explicit ticks |
+| `xformat`, `yformat` | Numeric formats, including the percentage rules above |
+| `xscale`, `yscale` | `linear`, `log`, `symlog` on supported numeric axes |
 
-Heatmap and confusion allow axis label and tick display overrides while preserving categorical matrix limits.
-Radar retains its radial `ylim`. Inapplicable or conflicting settings raise errors.
-For horizontal bar and box plots, X/Y refer to the on-screen axes.
+Options refer to displayed axes, including horizontal plots. Matrix axes allow label/tick overrides;
+radar retains radial `ylim`. Native 3D also accepts Z options but requires linear scales.
+Unsupported combinations raise errors. Matrix value colors can use `chart_opts.color_scheme`.
 
-Use `FigureConfig(facets={"sharex": True, "sharey": True})` with a complete rectangular grid
-for equal plotting areas and shared ranges. Set either flag to `False` for independent ranges.
-Explicit `xlim/ylim` remain authoritative; conflicting shared-axis settings raise errors.
-Facets cannot be combined with panels spanning multiple cells.
-Mixed figures allow matrix colorbars and round-chart external labels to have their own margins.
+`facets` supports complete rectangular grids and shared ranges, not spanning layouts.
+Round and native 3D facets require `sharex=False, sharey=False`.
+Use advanced `Figure` for spanning cells and explicit composition ratios.
 
 ## Legends
 
-The figure-level `legend` controls scope, position, columns, font size, frame, order and display labels.
-Shared legends default to the center below the main title and above the panels.
-Use `legend={"scope": "shared", "ncols": 3}` to request a shared legend explicitly.
-Other supported shared positions include `bottom`, `left` and `right`.
-
-Panels inherit the figure settings and override them through `chart_opts={"legend": {...}}`.
-For example, `chart_opts={"legend": {"position": "upper right"}}` requests a local legend.
-`legend=False` hides legends. Font sizes and spacing options such as `gap` use pt.
-`legend.order` and `legend.labels` accept original series IDs.
-
-Repeated grouping columns share a legend automatically by default; ungrouped multi-metric plots
-share only when `scope="shared"` is explicit. Conflicting shared settings raise errors.
-Local positions include inside corners and outside placements. Advanced anchor settings are available
-in [the legend configuration](data_visuals/core/legend.py).
+`legend={"scope": "shared", "position": "top", "ncols": 3}` requests a shared legend.
+The default shared position is below the main title; `bottom/left/right` are also supported.
+Repeated grouping fields share automatically; ungrouped multi-metric panels need explicit shared scope.
+Panel overrides use `chart_opts={"legend": {...}}`; an explicit panel override defaults to local scope.
+`legend=False` hides legends. `fontsize`, `gap` and spacing use pt; `order/labels` accept raw IDs.
+Conflicting shared settings raise errors. [All legend fields](data_visuals/core/legend.py).
 
 ## Circular bars
 
-**Available in FigCompose 0.1.2 and later.**
-Each object occupies the same ring in every sector. Filled angle encodes a score on an independent scale,
-rather than a share of a total. The chart uses the same white canvas, fonts, palettes and series identities as other charts.
+The same object occupies the same ring in each sector; filled angle encodes an independent score,
+not a share or a radius-comparable arc length. Every object/metric cell is required.
+Duplicates need explicit `aggregate="mean"`, `"median"` or `"sum"`.
 
-```python
-import pandas as pd
-from data_visuals import plot
+`value_range=(0,100)` sets the scale without rescaling values. `summary="mean"` explicitly requests
+equal-object means; default `None` adds none. `summary_position="auto"` selects top under `showcase`,
+inline otherwise; `top/inline` override it. `center=None` hides the count, `order` sets rings,
+and `rounded=False` uses flat ends. Small panels may sample ID labels while retaining all scores.
+[Native example](examples/circular_scores/README.md).
 
-data = pd.DataFrame({
-    "participant": ["P01", "P02", "P03"] * 4,
-    "subject": ["Math"] * 3 + ["English"] * 3 + ["Physics"] * 3 + ["Geography"] * 3,
-    "score": [84, 76, 91, 65, 83, 72, 58, 79, 68, 88, 62, 75],
-})
-fig = plot(
-    data,  # Or a long-form CSV with these columns
-    x="participant", group="subject",
-    plots=[{"kind": "circular_bar", "metric": "score", "summary": "mean", "title": None}],
-    canvas={"width": 180}, style="modern", palette="curated-7-warm",
-    title="Four subjects, three participant profiles",
-)
-fig.render("circular_scores.pdf")
-fig.render("circular_scores.png", dpi=300)
-```
+## Advanced chart options
 
-- `value_range=(0, 100)` sets the scale; use `(0, 1)` for proportions. Values are never silently rescaled.
-- Each object/metric pair must be present. Missing pairs are rejected; duplicate pairs require explicit `aggregate="mean"`, `"median"` or `"sum"`.
-- `summary="mean"` requests unweighted means over per-object scores, calculated before rendering. The default adds no summary.
-- `center="count"` shows the unique object count; `center=None` hides it. `order` sets ring order; `rounded=False` uses flat ends.
-- Small figures can show fewer object labels while retaining every score and the original physical text size.
+**Chord.** Weights must be finite and positive; self-links are rejected. Duplicate/reversed pairs
+require `aggregate="sum"`. `order` lists all observed nodes; `summary=True` adds counts/total,
+and `ticks=False` hides automatic weight ticks. Both endpoints share one angular scale;
+incident totals sum to twice the edge total. Register the union of source/target IDs under
+the mapped **source column**. [Example](examples/chord_connections/README.md).
+
+**Raincloud/ridgeline.** Defaults: `horizontal=True`, `bandwidth="scott"`,
+`normalization="peak"`, `summary="median"`. `order` controls categories; a positive numeric bandwidth
+is accepted. `area` normalization uses a common density scale. Each cell needs two varying finite
+values. Raincloud offsets are perpendicular to the measured axis; rugs retain every observation.
+KDE, quartiles and whiskers are not mean confidence intervals. [Series](examples/intervals/README.md).
+
+**Paired/estimation.** Require an explicit two-level `order`; differences are `order[1]-order[0]`.
+Each pair needs one observation at both levels; duplicates/missing pairs are rejected.
+Paired paths default to a mean overlay (`summary=None` disables it).
+Estimation accepts one group per panel and requires either `lower/upper` columns or
+`ci_method="paired_t"` plus explicit `confidence`. Supplied bounds must be constant per group,
+contain the mean difference and cannot be combined with computed CI options.
+There is no implicit 95% interval. The right axis is `delta = Y - mean(first level)`;
+its density describes individual differences and requires variation. Optional `density_range`
+must contain all differences and zero. [Original supplied-bound entry](examples/intervals/generate.py).
+
+**3D.** `scatter3d` projection planes are explicit: `projections={"z": 0}` with optional
+`projection_lines=["z"]`. `waterfall3d` needs a baseline and at least two X positions per series;
+depth is series order, not another measurement. `bar3d` requires nonnegative complete cells;
+grouped components require `stacked=True`. Missing cells are not filled with zero.
+Duplicates require explicit aggregation. Bar ordering uses `x_order/y_order/group_order`;
+`label_totals` and `total_format` control totals. Camera options are `elev/azim/box_aspect/zoom`
+and `proj_type="ortho" / "persp"`. [Six-panel and carousel examples](examples/three_dimensional_views/README.md).
 
 ## Figure checks and layout snapshots
 
-`fig.check()` measures final text, fonts and plotting areas without adjusting data, fonts, ranges or canvas.
-The optional debug image is separate from normal exports.
-
-```python
-from pathlib import Path
-import pandas as pd
-from data_visuals import plot
-
-fig = plot(
-    pd.DataFrame({"epoch": [1, 2, 3], "score": [0.70, 0.81, 0.87]}),
-    x="epoch", plots=[{"kind": "line", "metric": "score"}],
-    canvas={"width": 90}, title="Training progress",
-)
-report = fig.check(debug="layout_check.png")
-print(report.summary())
-report.raise_for_errors()  # Optional; include_warnings=True also requires no warnings
-
-baseline = Path("layout_baseline.json")
-if baseline.exists():
-    comparison = report.compare(baseline, tolerance=0.5)
-    print(comparison.summary())
-    comparison.save("layout_changes.json")
-    assert comparison.ok, comparison.summary()
-else:
-    report.save(baseline)  # Establish once; later runs compare the existing file
-```
-
-- `min_fontsize=7`, `min_tick_gap=1` and `tolerance=1` use pt and can be overridden in `check()`.
-  `report.ok` means no errors. Read `report.errors` and `report.warnings` separately.
-  Overflow is an error; small fonts, tick and decoration overlap are warnings; font substitution is informational.
-  `check(min_fontsize=8)` reports the default 7 pt ticks as warnings.
-- Reports include physical canvas size, panel areas, text bounds, resolved fonts and actual styles.
-  Debug images mark cells in blue, plotting areas in green and issues in orange/red. PNG / SVG / PDF are supported.
-- `report.compare(baseline, tolerance=0.5)` compares physical positions with 0.5 pt geometric tolerance;
-  fonts and colors are compared strictly. DPI is ignored. This is a structural comparison, not a pixel comparison.
-  Keep baselines and update them explicitly after review. `FigureReport.load(...)` reads a saved report.
-- After native edits to `mpl_fig = fig.render()`, use `from data_visuals import check_figure`,
-  then `check_figure(mpl_fig)` and finally `plt.close(mpl_fig)`. `fig.check()` closes its own temporary figure.
-
-Plotting-area fraction is a rectangle-allocation measure, not a whitespace or aesthetic score.
-Checks do not assess statistical conclusions or overlap between data artists, and do not guarantee
-collision-free custom nodes, connections or projected 3D text. Coverage limits are included in reports.
+`report = fig.check(debug="layout.png")` measures final text/layout/style without changing the figure.
+Use `report.raise_for_errors(include_warnings=True)` for strict checks and `report.save("layout.json")`
+to save evidence. `FigureReport.load(...)` restores it; `report.compare(baseline, tolerance=.5)`
+compares structure in pt, not pixels. Establish baselines once and review intentional changes.
+After editing a rendered Matplotlib figure, use `check_figure(rendered)` and close it yourself.
+Checks do not assess scientific meaning, arbitrary node collisions or 3D occlusion.
 
 ## Custom Matplotlib panels
 
-The advanced `data_visuals.core.Figure` API supports spanning cells, width/height ratios and drawing callbacks.
-A fully custom figure requires no CSV or placeholder DataFrame:
-
-```python
-from data_visuals.core import Figure, PanelResult
-
-def draw_module(ax, ctx):
-    text = ax.text(
-        0.5, 0.5, "Encoder", ha="center", va="center",
-        bbox={"boxstyle": "round,pad=0.6", "facecolor": ctx.background},
-        **ctx.text_kwargs(),
-    )
-    return PanelResult(artists=[text])
-
-paper = Figure(rows=1, cols=1, canvas={"width": 90}, legend=False)
-paper[0, 0].custom(draw_module, min_size=(120, 70), preferred_aspect=2)
-paper.render("model.svg")
-```
-
-`.custom()` accepts `projection="polar"`, `"3d"` or a registered Matplotlib projection name.
-Use `axes_options` for native axes constructor arguments, and `axes="on"` to show axes.
-`min_size` uses pt; `box_aspect` is a hard plotting-area width/height constraint;
-`preferred_aspect` is an automatic-height preference.
-
-Use `ctx.text_kwargs()` and `ctx.color()` for shared styling. Return measured artists,
-legend handles or a `layout(ax, ctx)` size-update callback through `PanelResult`.
-The framework manages the whole figure; the callback arranges its internal nodes and connections.
-Automatic-size probes and exports rerun callbacks, so they should rebuild without external side effects.
-Custom callbacks are runtime objects; Specs containing them cannot be serialized to JSON.
+`Figure[row,col].custom(draw, ...)` manages an axes for `draw(ax, context)`; pure custom figures need no data.
+Use `context.text_kwargs()` and `context.color()` for consistent styling. Return artists/legend handles
+and an optional resize callback through `PanelResult`. `min_size` is pt; `box_aspect` is width/height.
+`projection` selects native axes; `axes_options` supplies constructor options.
+Sizing/export can rebuild callbacks, so keep them free of external side effects.
+Custom callbacks are runtime objects and cannot be serialized as a JSON FigureSpec.
 
 ## Source entry points
 
-- [Declarative API](data_visuals/api.py): `plot()` and CSV input.
-- [Paper configuration](data_visuals/core/config.py): `FigureConfig`.
-- [Advanced Figure](data_visuals/core/figure.py): panel declarations and composition.
-- [Panel context and results](data_visuals/core/panel.py): custom drawing lifecycle.
-- [Original palettes](data_visuals/utils/colors.py): curated colors and continuous scales.
-- [Quality reports](data_visuals/core/quality.py): inspection results.
-- [Layout regression](data_visuals/core/regression.py): snapshot comparisons.
+[API](data_visuals/api.py) · [Configuration](data_visuals/core/config.py) · [Figure](data_visuals/core/figure.py) · [Panel context](data_visuals/core/panel.py) · [Palettes](data_visuals/utils/colors.py) · [Reports](data_visuals/core/quality.py)
