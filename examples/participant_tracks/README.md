@@ -7,7 +7,7 @@ the two outer tracks show BMI and age. The open sector summarises those same peo
 This is a ready-made `Figure.custom` template, rather than an additional built-in `kind`.
 
 ```bash
-python -m pip install "FigCompose>=0.1.2"
+python -m pip install "FigCompose>=0.2.0"
 python examples/participant_tracks/generate.py
 python examples/participant_tracks/generate.py --data my_cohort.csv --out output/cohort
 ```

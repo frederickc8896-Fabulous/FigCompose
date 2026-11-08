@@ -9,11 +9,11 @@ def add_panel(slot, bundle, support, *, title=None):
                      "opacity": 1, "x_offsets": {
                          name: (index - (len(names) - 1) / 2) * 6
                          for index, name in enumerate(names)},
-                     "series_styles": {name: {"marker": "o", "size": 27,
-                                              "edgecolor": "white", "linewidth": .6}
+                     "series_styles": {name: {"marker": "o", "size": 42,
+                                              "edgecolor": "white", "linewidth": .8}
                                        for name in names},
                      "errorbar": {"lower": "ci95_lower_pp", "upper": "ci95_upper_pp",
-                                  "capsize": 2.2, "linewidth": 1.1, "alpha": .9},
+                                  "capsize": 3.2, "linewidth": 1.6, "alpha": .95},
                      "xticks": list(bundle["conditions"]),
                      "guides": [{"axis": "y", "value": 0, "linestyle": "--",
                                  "color": "#8993a1", "linewidth": .7}],

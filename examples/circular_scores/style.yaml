@@ -1,5 +1,5 @@
 dpi: 300
-theme: modern
+theme: showcase
 palette: curated-7-warm
 title: null
 legend_max_entries: 0
@@ -7,6 +7,12 @@ legend_position: top-right
 legend:
   visible: false
 font_family: Times New Roman
+font_sizes:
+  main_title: 23.0
+  title: 12.0
+  axis_label: 10.0
+  tick: 10.0
+  legend: 10.0
 background: '#ffffff'
 category_colors: {}
 facets: {}
@@ -32,6 +38,6 @@ series:
 auto_margins: true
 autosize: true
 canvas:
-  width: 190.0
-  height: 200.0
+  width: 210.0
+  height: 255.0
   unit: mm

@@ -7,7 +7,7 @@ Ward dendrogram, nine signed-value tracks and a four-cluster annotation ring.
 The opening explains the scale; every second sample label is shown at readable size.
 
 ```bash
-python -m pip install "FigCompose>=0.1.2"
+python -m pip install "FigCompose>=0.2.0"
 python examples/clustered_heatmap/generate.py
 python examples/clustered_heatmap/generate.py --data my_matrix.csv --out output/clusters
 ```

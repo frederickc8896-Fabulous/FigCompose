@@ -1,19 +1,23 @@
-theme: modern
+theme: showcase
 palette: curated-10-vibrant
 font_family: Times New Roman
 font_sizes:
-  main_title: 16
+  main_title: 21
+  axis_label: 13
+  tick: 13
 legend:
-  scope: shared
-  position: top
-  ncols: 3
-  fontsize: 10.5
-  gap: 3
-category_colors:
-  group:
-    Imaging: '#fb9017'
-    Clinical: '#fd9e02'
-    Genomics: '#ffb703'
-    Proteomics: '#126782'
-    Microbiome: '#58b4d1'
-    Metabolomics: '#8ecae6'
+  visible: false
+series:
+  source:
+  - id: Imaging
+    color: '#fb9017'
+  - id: Genomics
+    color: '#ffb703'
+  - id: Clinical
+    color: '#fd9e02'
+  - id: Proteomics
+    color: '#126782'
+  - id: Microbiome
+    color: '#58b4d1'
+  - id: Metabolomics
+    color: '#8ecae6'

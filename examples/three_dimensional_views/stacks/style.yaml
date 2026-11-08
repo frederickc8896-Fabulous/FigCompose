@@ -1,0 +1,44 @@
+dpi: 150
+theme: showcase
+palette: curated-7-cool
+title: null
+legend_max_entries: 0
+legend_position: top-right
+legend:
+  scope: shared
+  position: top
+  fontsize: 10.0
+  gap: 6.0
+  ncols: 4
+  order:
+  - Group 1
+  - Group 2
+  - Group 3
+  - Group 4
+font_family: Times New Roman
+font_sizes:
+  main_title: 22.0
+  title: 11.0
+  axis_label: 9.0
+  tick: 8.0
+  legend: 10.0
+background: '#ffffff'
+category_colors:
+  series:
+    Group 1: '#fb8500'
+    Group 2: '#fcab64'
+    Group 3: '#a0ced9'
+    Group 4: '#6db2c4'
+  component:
+    Part A: '#489fb5'
+    Part B: '#37718e'
+    Part C: '#457b9d'
+facets: {}
+fields: {}
+series: {}
+auto_margins: true
+autosize: true
+canvas:
+  width: 180.0
+  height: null
+  unit: mm

@@ -1,5 +1,5 @@
 dpi: 150
-theme: modern
+theme: showcase
 palette: curated-5-cool
 title: null
 legend_max_entries: 0
@@ -15,11 +15,11 @@ legend:
   - Dataset III
 font_family: Times New Roman
 font_sizes:
-  main_title: 16.0
-  title: 10.5
-  axis_label: 9.0
-  tick: 8.0
-  legend: 10.0
+  main_title: 23.0
+  title: 11.5
+  axis_label: 9.5
+  tick: 8.5
+  legend: 11.0
 background: '#ffffff'
 category_colors:
   dataset:
@@ -31,6 +31,9 @@ fields:
   difference_pp:
     label: 'Paired change: B - A'
     unit: pp
+  measurement_value:
+    label: Accuracy
+    unit: '%'
 series:
   dataset:
   - id: Dataset I

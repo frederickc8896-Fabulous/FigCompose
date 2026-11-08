@@ -10,8 +10,8 @@
       "errors": 0,
       "warnings": 0,
       "canvas_mm": [
-        240.0,
-        297.5640461215933
+        250.0,
+        306.99126832826545
       ],
       "destination": ".",
       "view": "overview"
@@ -21,7 +21,7 @@
       "warnings": 0,
       "canvas_mm": [
         180.0,
-        146.70968749999997
+        149.11519097222222
       ],
       "destination": "boxplot",
       "view": "boxplot"
@@ -31,7 +31,7 @@
       "warnings": 0,
       "canvas_mm": [
         180.0,
-        160.2850841346154
+        168.11457017249103
       ],
       "destination": "raincloud",
       "view": "raincloud"
@@ -41,7 +41,7 @@
       "warnings": 0,
       "canvas_mm": [
         180.0,
-        165.034015758547
+        173.27110019041217
       ],
       "destination": "ridgeline",
       "view": "ridgeline"
@@ -51,7 +51,7 @@
       "warnings": 0,
       "canvas_mm": [
         180.0,
-        160.06413141025644
+        168.8133206765233
       ],
       "destination": "paired",
       "view": "paired"
@@ -61,7 +61,7 @@
       "warnings": 0,
       "canvas_mm": [
         180.0,
-        152.7354700854701
+        158.72616487455196
       ],
       "destination": "estimation",
       "view": "estimation"
@@ -71,7 +71,7 @@
       "warnings": 0,
       "canvas_mm": [
         180.0,
-        168.81262499999997
+        171.07481249999998
       ],
       "destination": "forest",
       "view": "forest"

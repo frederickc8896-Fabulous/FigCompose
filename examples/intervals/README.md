@@ -1,13 +1,21 @@
 # Differences and intervals / 差值与区间
 
 New: [six complementary views of paired data / 差异与不确定性六图系列](series/README.md).
-The overview combines native box plots and confidence intervals with ready-to-use
-raincloud, ridgeline, paired-path and paired-estimation templates. Shared data identities,
-fonts and the figure legend are managed by FigCompose.
+The overview uses native raincloud, ridgeline, paired, estimation and box charts, plus
+native scatter with supplied intervals. Shared data identities, statistics, fonts and the
+figure legend are managed by FigCompose. There are no custom drawing callbacks.
+
+The overview opens with full rainclouds and layered ridges, then pairs individual trajectories
+with an estimation plot before ending with the two native summaries. White seams mark distribution
+medians. The large raincloud numbers are medians; the paired and estimation numbers are mean B − A
+changes in percentage points. They describe different summaries and are labeled separately.
+
+新版先看饱满雨云与层叠山脊，再看个体配对和估计，最后读箱线与全部CI。白色分隔线标示中位数；
+雨云的大数字是中位数，配对与估计图的大数字是均值差，单位均为百分点。所有原始点、配对线和区间完整保留。
 
 ```bash
-# Current repository version; the new font_sizes setting is not in PyPI 0.1.2:
-python -m pip install .
+# Native statistical charts and showcase style are included in FigCompose 0.2.0:
+python -m pip install "FigCompose>=0.2.0"
 python examples/intervals/generate_series.py
 python examples/intervals/generate_series.py --view raincloud --condition 4 --out my_raincloud
 ```
@@ -22,12 +30,16 @@ they are not confidence intervals for the mean. Each panel names its data subset
 新增系列读取原始配对观测与预计算汇总：箱线、雨云和配对连线默认选条件4；山脊图选Dataset II的五条件；
 配对估计图选Dataset II、条件4；区间图汇总全部15个单元。单图可独立导出，原600行数据与CI不变。
 
+六格现已全部使用FigCompose原生声明。配对关系由`pair="paired_run"`明确指定，顺序显式为A、B；
+估计图直接读取原CSV的上下界，并显式标记`confidence=.95`，不在渲染时重算区间。
+原始宽表只在示例构建阶段展开成长表，未生成、删除或重新抽样任何观测。
+
 The original supplied-bound example remains available below, including its asymmetric-bound input.
 
 ![Expected output / 预期效果](preview.png)
 
 ```bash
-python -m pip install "FigCompose>=0.1.2"
+python -m pip install "FigCompose>=0.2.0"
 python examples/intervals/generate.py
 ```
 

@@ -9,16 +9,17 @@ import argparse
 import json
 from pathlib import Path
 import runpy
-from types import SimpleNamespace
 
 import matplotlib
 matplotlib.use("Agg")
+import pandas as pd
 
 from data_visuals import FigureConfig
 from data_visuals.core import Figure
 
 HERE = Path(__file__).resolve().parent
 VIEWS = ("boxplot", "raincloud", "ridgeline", "paired", "estimation", "forest")
+OVERVIEW_ORDER = ("raincloud", "ridgeline", "paired", "estimation", "boxplot", "forest")
 DESCRIPTIONS = {
     "boxplot": "Box plot: spread and outliers",
     "raincloud": "Raincloud: shape and observations",
@@ -50,15 +51,30 @@ def build_figure(data_path=None, profile_path=None, *, paired_path=None,
         raise ValueError(f"Unknown series view: {view!r}")
     config = FigureConfig.load(HERE / "series_style.yaml" if profile_path is None else profile_path)
     bundle = prepare(data_path, paired_path, condition=condition) if bundle is None else bundle
-    support = SimpleNamespace(**{key: value for key, value in
-                                runpy.run_path(str(HERE / "series_support.py")).items()
-                                if not key.startswith("_")})
+    support = None  # Kept in panel helper signatures for existing callers.
     overview = view == "overview"
-    paper = Figure(data=bundle["frame"], config=config,
+    # This adapter preserves every original ID/value. Native pair charts take
+    # an explicit long table; supplied intervals remain the exact CSV values.
+    pair_frames = []
+    for level, column in (("A", "method_a_pct"), ("B", "method_b_pct")):
+        frame = bundle["paired"].copy()
+        frame["measurement"] = level
+        frame["measurement_value"] = frame[column]
+        frame["record_type"] = "paired_observation"
+        frame = frame.merge(bundle["summary"][["dataset", "condition", "ci95_lower_pp", "ci95_upper_pp"]],
+                            on=["dataset", "condition"], how="left", validate="many_to_one", sort=False)
+        pair_frames.append(frame)
+    native_frame = pd.concat((bundle["frame"], *pair_frames), ignore_index=True, sort=False)
+    # Empty fields belong to other record types. Keep them as JSON null rather
+    # than NaN while retaining the dtype of complete measurement columns.
+    for column in native_frame:
+        if native_frame[column].isna().any():
+            native_frame[column] = native_frame[column].astype(object).where(native_frame[column].notna(), None)
+    paper = Figure(data=native_frame, config=config,
                    rows=3 if overview else 1, cols=2 if overview else 1,
-                   canvas={"width": 240 if overview else 180},
-                   title="More than a mean: six views of paired data" if overview else DESCRIPTIONS[view])
-    for index, name in enumerate(VIEWS if overview else (view,)):
+                   canvas={"width": 250 if overview else 180},
+                   title="Six ways to see change" if overview else DESCRIPTIONS[view])
+    for index, name in enumerate(OVERVIEW_ORDER if overview else (view,)):
         row, col = divmod(index, 2) if overview else (0, 0)
         if name in ("boxplot", "raincloud", "paired"):
             detail = f"Condition {bundle['condition']}"
@@ -70,7 +86,7 @@ def build_figure(data_path=None, profile_path=None, *, paired_path=None,
             detail = "All conditions, mean and 95% CI"
         kind = {"boxplot": "Box plot", "raincloud": "Raincloud", "ridgeline": "Ridgeline",
                 "paired": "Paired paths", "estimation": "Paired estimation", "forest": "Intervals"}[name]
-        title = (f"({chr(97 + index)}) {kind} | {detail}" if overview else detail)
+        title = (f"{index + 1:02d}  {kind} | {detail}" if overview else detail)
         module = runpy.run_path(str(HERE / "series_panels" / f"{name}.py"))
         module["add_panel"](paper[row, col], bundle, support, title=title)
     return paper
@@ -102,8 +118,9 @@ def generate(data_path=None, profile_path=None, *, paired_path=None, condition=4
 
 def write_index(destination, bundle):
     notes = ["# 差异与不确定性 · 六图系列", "",
+             "新版以雨云与山脊开场：饱满轮廓、完整观测点和醒目的效应读数，沿分布→配对→汇总的顺序阅读。",
              "一份模拟配对数据，六种互补视角。整图画布、标题、字体、共享图例和导出由FigCompose管理。",
-             "箱线图和区间图使用内置图种；其余使用随示例提供的custom绘制模板，不是新增原生kind。", "",
+             "六格全部使用原生图种：raincloud、ridgeline、paired、estimation、box，以及带给定区间的scatter。", "",
              f"共有{len(bundle['paired'])}条配对观测、{len(bundle['summary'])}个原始汇总估计。"
              f"箱线、雨云和配对连线选条件{bundle['condition']}；"
              f"山脊图展示{bundle['ridge_dataset']}的全部条件；配对估计选该数据集与焦点条件；"

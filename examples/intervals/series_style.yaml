@@ -1,12 +1,12 @@
-theme: modern
+theme: showcase
 palette: curated-5-cool
 font_family: Times New Roman
 font_sizes:
-  main_title: 16
-  title: 10.5
-  axis_label: 9
-  tick: 8
-  legend: 10
+  main_title: 23
+  title: 11.5
+  axis_label: 9.5
+  tick: 8.5
+  legend: 11
 legend:
   scope: shared
   position: top
@@ -25,3 +25,4 @@ series:
     - {id: Dataset III, label: Dataset III, color: '#0d47a1', marker: o}
 fields:
   difference_pp: {label: 'Paired change: B - A', unit: pp}
+  measurement_value: {label: Accuracy, unit: '%'}

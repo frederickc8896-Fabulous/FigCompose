@@ -4,7 +4,7 @@ This **custom Matplotlib template** is managed by FigCompose; it is not an addit
 The same synthetic participants choose A, B or C at three snapshots. Each CSV row is a complete path.
 
 ```bash
-python -m pip install "FigCompose>=0.1.2"
+python -m pip install "FigCompose>=0.2.0"
 python examples/alluvial_flows/generate.py
 ```
 

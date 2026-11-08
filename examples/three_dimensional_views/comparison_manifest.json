@@ -1,0 +1,45 @@
+{
+  "synthetic": true,
+  "views": [
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        245.00000000000006,
+        345.00000000000006
+      ],
+      "destination": ".",
+      "view": "overview"
+    },
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        245.00000000000006,
+        160.0
+      ],
+      "destination": "profiles",
+      "view": "profiles"
+    },
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        245.00000000000006,
+        160.0
+      ],
+      "destination": "projections",
+      "view": "projections"
+    },
+    {
+      "errors": 0,
+      "warnings": 0,
+      "canvas_mm": [
+        245.00000000000006,
+        160.0
+      ],
+      "destination": "stacks",
+      "view": "stacks"
+    }
+  ]
+}

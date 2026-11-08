@@ -1,102 +1,21 @@
 """Three paired views: profiles, points and stacked amounts in 2D and 3D."""
 from __future__ import annotations
 import argparse
+import json
 from pathlib import Path
 import runpy
 
 import matplotlib
 matplotlib.use("Agg")
-from matplotlib.collections import PolyCollection
 import numpy as np
 import pandas as pd
 
 from data_visuals import FigureConfig
-from data_visuals.core import Figure, PanelResult
+from data_visuals.core import Figure
 
 HERE = Path(__file__).resolve().parent
 GROUPS = ("Group 1", "Group 2", "Group 3", "Group 4")
 PARTS = ("Part A", "Part B", "Part C")
-
-
-def style_3d(ax, context, labels):
-    ax.set_proj_type("ortho")
-    for axis, label in zip((ax.xaxis, ax.yaxis, ax.zaxis), labels):
-        axis.set_label_text(label, **context.text_kwargs("axis_label"))
-        axis.labelpad = 1.5
-        axis.pane.set_facecolor((.97, .98, .99, .12))
-        axis.pane.set_edgecolor((.80, .84, .88, .3))
-        axis._axinfo["grid"].update(color=(.75, .79, .85, .25), linewidth=.45)
-        axis.line.set_color("#A6B3C8")
-        axis.line.set_linewidth(.5)
-    ax.tick_params(labelsize=context.font_sizes["tick"], pad=0)
-    for text in (*ax.get_xticklabels(), *ax.get_yticklabels(), *ax.get_zticklabels()):
-        text.set_fontfamily(context.font_family)
-
-
-def draw_profiles(ax, context):
-    frame = context.payload
-    polygons, colors = [], []
-    for index, group in enumerate(GROUPS):
-        data = frame[frame.series == group].sort_values("x")
-        x, y = data.x.to_numpy(), data.signal.to_numpy()
-        polygons.append([(x[0], 0), *zip(x, y), (x[-1], 0)])
-        colors.append(context.color(group))
-        ax.plot(x, np.full(len(x), index), y, color=colors[-1], linewidth=.8)
-    collection = PolyCollection(polygons, facecolors=colors, alpha=.65,
-                                edgecolors=colors, linewidths=.5)
-    ax.add_collection3d(collection, zs=range(4), zdir="y")
-    ax.set_yticks(range(4), labels=("G1", "G2", "G3", "G4"))
-    ax.set_xticks((0, 2, 4, 6, 8))
-    ax.set_zticks((0, 10, 20, 30))
-    ax.set_box_aspect((1.3, 1, .9))
-    style_3d(ax, context, ("Position", "Series", "Signal"))
-    return PanelResult()
-
-
-def draw_projections(ax, context):
-    frame = context.payload
-    for group in GROUPS:
-        data = frame[frame.series == group]
-        color = context.color(group)
-        x, y, z = (data[column].to_numpy() for column in ("x", "y", "z"))
-        ax.scatter(x, y, z, color=color, s=22, depthshade=False,
-                   edgecolors="white", linewidths=.45)
-        ax.scatter(x, y, np.zeros(len(x)), color=color, s=9, alpha=.18, depthshade=False)
-        ax.scatter(np.zeros(len(x)), y, z, color=color, s=9, alpha=.18, depthshade=False)
-        ax.scatter(x, np.full(len(x), 10.), z, color=color, s=9, alpha=.18, depthshade=False)
-    ax.set_xticks((0, 5, 10))
-    ax.set_yticks((0, 5, 10))
-    ax.set_zticks((0, 5, 10))
-    ax.set_box_aspect((1, 1, 1))
-    style_3d(ax, context, ("X", "Y", "Z"))
-    return PanelResult()
-
-
-def draw_stacks(ax, context):
-    frame = context.payload
-    x, y, bottoms, heights, colors = [], [], [], [], []
-    for index, part in enumerate(PARTS):
-        records = frame[frame.component == part].sort_values(["group_id", "sample"])
-        bottom = np.array([
-            frame[(frame.group_id == group) & (frame["sample"] == sample)
-                  & frame.component.isin(PARTS[:index])].amount.sum()
-            for group, sample in zip(records.group_id, records["sample"])
-        ])
-        x.extend(records.group_id.to_numpy() - 1.34)
-        y.extend(records["sample"].to_numpy() - 1.34)
-        bottoms.extend(bottom)
-        heights.extend(records.amount.to_numpy())
-        colors.extend([context.color(part)] * len(records))
-    # All faces must share one collection: separate calls sort entire layers
-    # against each other and can paint a rear segment over a nearer stack.
-    ax.bar3d(x, y, bottoms, .68, .68, heights, color=colors, shade=False,
-             edgecolor="white", linewidth=.4, zsort="average")
-    ax.set_xticks(range(3), labels=("G1", "G2", "G3"))
-    ax.set_yticks(range(3), labels=("S1", "S2", "S3"))
-    ax.set_zticks((0, 50, 100, 150))
-    ax.set_box_aspect((1, 1, 1))
-    style_3d(ax, context, ("Group", "Sample", "Amount"))
-    return PanelResult()
 
 
 def read_data(path):
@@ -136,41 +55,97 @@ def read_data(path):
     return data
 
 
-def build_figure(data_path=None, profile_path=None):
-    data = read_data(data_path or HERE / "data.csv")
-    config = FigureConfig.load(profile_path or HERE / "style.yaml")
-    paper = Figure(data=data, rows=3, cols=2, config=config,
-                   canvas={"width": 245, "height": 325},
-                   title="Same data, different views | What does depth add?")
-    paper[0, 0].line(x="x", y="signal", group="series", markers=False,
-                     where={"view": "profile"}, title="(a) Profiles | Direct comparison",
+def add_profiles(paper, row, data):
+    paper[row, 0].line(x="x", y="signal", group="series", markers=False, area=True,
+                     where={"view": "profile"}, title="01  Overlay the signals",
                      chart_opts={"xlabel": "Position", "ylabel": "Signal",
-                                 "xlim": [0, 8], "ylim": [0, 32]})
-    paper[0, 1].custom(draw_profiles, payload=data[data.view == "profile"],
-                       projection="3d", axes="on", color_group="series", categories=GROUPS,
-                       limits=((0, 8), (-.25, 3.25), (0, 32)),
-                       axes_options={"elev": 24, "azim": -58}, legend=False,
-                       title="(b) Waterfall | Separate overlapping signals", min_size=(180, 170))
-    paper[1, 0].scatter(x="x", y="y", group="series", where={"view": "points"},
-                        title="(c) XY projection | The Z coordinate is omitted",
-                        chart_opts={"xlabel": "X", "ylabel": "Y", "xlim": [0, 10], "ylim": [0, 10]})
-    paper[1, 1].custom(draw_projections, payload=data[data.view == "points"],
-                       projection="3d", axes="on", color_group="series", categories=GROUPS,
-                       limits=((0, 10), (0, 10), (0, 10)),
-                       axes_options={"elev": 24, "azim": -58}, legend=False,
-                       title="(d) 3D points | Shadows repeat the same samples", min_size=(180, 170))
-    local = {"scope": "local", "position": "upper left", "ncols": 3,
-             "fontsize": 8, "order": list(PARTS)}
-    paper[2, 0].bar(x="stack", y="amount", group="component", stacked=True,
-                    where={"view": "stacks"}, title="(e) Stacks | All nine totals are visible",
+                                 "xlim": [0, 8], "ylim": [0, 32], "xticks": [0, 2, 4, 6, 8],
+                                 "yticks": [0, 8, 16, 24, 32],
+                                 "series_styles": {group: {"linewidth": 1.5} for group in GROUPS}})
+    paper[row, 2].waterfall3d(x="x", y="signal", group="series", baseline=0,
+                             where={"view": "profile"}, linewidth=1.7,
+                             elev=27, azim=-58, box_aspect=(1.6, 1.05, .95), zoom=1.09,
+                             title="Separate them in depth",
+                             chart_opts={"xlim": [0, 8], "ylim": [-.25, 3.25], "zlim": [0, 32],
+                                         "xticks": [0, 2, 4, 6, 8], "zticks": [0, 10, 20, 30],
+                                         "yticks": [0, 1, 2, 3], "yticklabels": ["G1", "G2", "G3", "G4"],
+                                         "xlabel": "Position", "ylabel": "Series", "zlabel": "Signal",
+                                         "legend": False})
+
+
+def add_projections(paper, row, data):
+    paper[row, 0].scatter(x="x", y="y", group="series", where={"view": "points"},
+                        opacity=.95, title="02  Drop one coordinate",
+                        chart_opts={"xlabel": "X", "ylabel": "Y", "xlim": [0, 10], "ylim": [0, 10],
+                                    "xticks": [0, 5, 10], "yticks": [0, 5, 10],
+                                    "series_styles": {group: {"size": 28, "edgecolor": "white", "linewidth": .55}
+                                                      for group in GROUPS}})
+    paper[row, 2].scatter3d(x="x", y="y", z="z", group="series", where={"view": "points"},
+                           point_size=34, opacity=1, projections={"x": 0, "y": 10, "z": 0},
+                           projection_lines=["z"], elev=25, azim=-58,
+                           box_aspect=(1.1, 1.1, 1), zoom=1.06,
+                           title="Recover Z; trace each projection",
+                           chart_opts={"xlabel": "X", "ylabel": "Y", "zlabel": "Z",
+                                       "xlim": [0, 10], "ylim": [0, 10], "zlim": [0, 10],
+                                       "xticks": [0, 5, 10], "yticks": [0, 5, 10], "zticks": [0, 5, 10],
+                                       "legend": False})
+
+
+def add_stacks(paper, row, data):
+    local = {"scope": "local", "position": "top", "ncols": 3,
+             "fontsize": 8.5, "order": list(PARTS), "gap": 3}
+    paper[row, 0].bar(x="stack", y="amount", group="component", stacked=True,
+                    where={"view": "stacks"}, title="03  Compare all nine stacks",
                     chart_opts={"ylim": [0, 150], "yticks": [0, 50, 100, 150],
                                 "xlabel": "Group / sample", "ylabel": "Amount", "legend": local})
-    paper[2, 1].custom(draw_stacks, payload=data[data.view == "stacks"],
-                       projection="3d", axes="on", color_group="component", categories=PARTS,
-                       limits=((-.65, 2.65), (-.65, 2.65), (0, 150)),
-                       axes_options={"elev": 24, "azim": -58}, legend=False,
-                       title="(f) 3D stacks | Rear cells can be obscured", min_size=(180, 170))
+    paper[row, 2].bar3d(x="group_id", y="sample", value="amount", group="component",
+                       stacked=True, label_totals=True, where={"view": "stacks"},
+                       elev=31, azim=-56, box_aspect=(1.15, 1.15, 1), zoom=1.06,
+                       title="Arrange them in space; watch occlusion",
+                       chart_opts={"xlim": [-.65, 2.65], "ylim": [-.65, 2.65], "zlim": [0, 150],
+                                   "xticks": [0, 1, 2], "xticklabels": ["G1", "G2", "G3"],
+                                   "yticks": [0, 1, 2], "yticklabels": ["S1", "S2", "S3"],
+                                   "zticks": [0, 50, 100, 150],
+                                   "xlabel": "Group", "ylabel": "Sample", "zlabel": "Amount", "legend": False})
+
+
+VIEWS = ("overview", "profiles", "projections", "stacks")
+TITLES = {"overview": "SAME DATA. NEW DIMENSION.",
+          "profiles": "SIGNALS, GIVEN ROOM TO BREATHE.",
+          "projections": "ONE POINT. THREE COORDINATES.",
+          "stacks": "NINE STACKS. THE SAME TOTALS."}
+
+
+def build_figure(data_path=None, profile_path=None, *, view="overview"):
+    if view not in VIEWS:
+        raise ValueError(f"Unknown comparison view: {view!r}")
+    data = read_data(data_path or HERE / "data.csv")
+    config = FigureConfig.load(profile_path or HERE / "style.yaml")
+    overview = view == "overview"
+    selected = VIEWS[1:] if overview else (view,)
+    paper = Figure(data=data, layout=[[2, 3] for _ in selected], config=config,
+                   canvas={"width": 245, "height": 345 if overview else 160},
+                   title=TITLES[view])
+    callbacks = {"profiles": add_profiles, "projections": add_projections, "stacks": add_stacks}
+    for row, name in enumerate(selected):
+        callbacks[name](paper, row, data)
     return paper
+
+
+def generate(data_path=None, profile_path=None, *, out=None, views=VIEWS, write_report=False):
+    destination = HERE if out is None else Path(out)
+    config = FigureConfig.load(profile_path or HERE / "style.yaml")
+    export = runpy.run_path(str(HERE.parent / "_export.py"))["export_figure"]
+    results = []
+    for view in views:
+        target = destination if view == "overview" else destination / view
+        result = export(build_figure(data_path, profile_path, view=view), target,
+                        config=config, write_report=write_report)
+        result.update(view=view, destination=target.relative_to(destination).as_posix())
+        results.append(result)
+    (destination / "comparison_manifest.json").write_text(
+        json.dumps({"synthetic": True, "views": results}, indent=2) + "\n", encoding="utf-8")
+    return results
 
 
 def main():
@@ -178,9 +153,10 @@ def main():
     parser.add_argument("--data", type=Path, default=HERE / "data.csv")
     parser.add_argument("--profile", type=Path, default=HERE / "style.yaml")
     parser.add_argument("--out", type=Path, default=HERE)
+    parser.add_argument("--view", choices=("all", *VIEWS), default="all")
     args = parser.parse_args()
-    export = runpy.run_path(str(HERE.parent / "_export.py"))["export_figure"]
-    export(build_figure(args.data, args.profile), args.out, config=FigureConfig.load(args.profile))
+    generate(args.data, args.profile, out=args.out,
+             views=VIEWS if args.view == "all" else (args.view,))
 
 
 if __name__ == "__main__":
