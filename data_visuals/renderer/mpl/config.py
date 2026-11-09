@@ -179,6 +179,11 @@ class MplConfig:
             name = name.strip().strip("'").strip('"')
             if name in available:
                 return name
+        # Matplotlib bundles STIXGeneral. Prefer this compact serif before
+        # the generic fallback when the requested system Times font is absent.
+        primary = raw_family.split(",")[0].strip().strip("'").strip('"')
+        if primary.casefold() == "times new roman" and "STIXGeneral" in available:
+            return "STIXGeneral"
         # Fallback: return the generic category (last part) or 'serif'
         generic = raw_family.split(",")[-1].strip()
         return generic if generic in ("serif", "sans-serif", "monospace") else "serif"

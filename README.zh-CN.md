@@ -40,7 +40,7 @@ python -m pip install "FigCompose>=0.3.0"
 包名为 **FigCompose**，Python 导入使用 `data_visuals`。
 **FigCompose 0.3.0** 包含 **22 种原生图表**、全部 13 套精选配色及 `general`、`modern`、`showcase` 三种风格。旧安装可用 `python -m pip install --upgrade "FigCompose>=0.3.0"` 更新。
 上方首屏组图实际展示 11 种图表；完整图种还包括分布、配对、弦图、三维图、环形多轨、环形聚类热图与多阶段流图。
-默认字体为 **Times New Roman**，由系统提供；缺少时回退其他衬线字体。
+默认字体为 **Times New Roman**，由系统提供。缺少时优先使用 Matplotlib 自带的 **STIXGeneral**，再使用通用 `serif` 回退；数学公式默认仍使用 STIX。
 
 <details>
 <summary>安装最新源码或更新已有安装</summary>

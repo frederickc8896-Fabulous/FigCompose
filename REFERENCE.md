@@ -113,7 +113,9 @@ grow or shrink fonts: insufficient space raises `LayoutError`. PNG DPI only chan
 Physical defaults in pt are main title/panel title/axis label/tick/legend:
 **11/9/8/7/8** for paper styles, **22/11/9/8/10** for `showcase`.
 Override roles through `font_sizes`; explicit legend sizes take priority for legends.
-The default font is Times New Roman, with a serif fallback when unavailable.
+The default font is Times New Roman. When it is unavailable, the fallback prefers
+Matplotlib's bundled STIXGeneral, then generic `serif`. Available fonts explicitly
+listed in `font_family` take priority over this fallback. Math expressions use STIX by default.
 
 | Axis option in `chart_opts` | Purpose |
 |---|---|

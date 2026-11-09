@@ -40,7 +40,7 @@ python -m pip install "FigCompose>=0.3.0"
 The package is named **FigCompose**; Python imports use `data_visuals`.
 **FigCompose 0.3.0** includes **22 native chart types**, all 13 curated palettes and the `general`, `modern` and `showcase` styles. Upgrade older installations with `python -m pip install --upgrade "FigCompose>=0.3.0"`.
 The hero image above demonstrates 11 chart types; the full set also includes distribution, paired-data, chord, 3D, participant-track, clustered-heatmap and alluvial charts.
-The default font is **Times New Roman**, supplied by your system; other serif fonts are used as fallbacks.
+The default font is **Times New Roman**, supplied by your system. If it is unavailable, FigCompose prefers Matplotlib's bundled **STIXGeneral**, then the generic `serif` fallback. Math expressions use STIX by default.
 
 <details>
 <summary>Install the latest source or update an existing installation</summary>

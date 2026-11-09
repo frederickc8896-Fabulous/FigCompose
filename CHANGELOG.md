@@ -23,6 +23,9 @@
 - Fix color-domain lookup for partial subplot descriptions and verify all 22
   native kinds in the installed-package release checks. The 13 curated palettes,
   three styles and default Times New Roman typography remain available.
+- Prefer Matplotlib's bundled STIXGeneral before generic `serif` when Times New
+  Roman is unavailable, preserving available explicit font choices and the default
+  STIX math font.
 
 ## 0.2.0 — 2026-11-08
 
