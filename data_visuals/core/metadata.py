@@ -144,7 +144,7 @@ def resolve_field_options(kind, mapping, options, fields, *, data=None):
             if column in fields and "label" in fields[column]:
                 resolved.setdefault(key, field_label(column, fields, include_unit=False))
         return resolved
-    if kind == "chord":
+    if kind in {"chord", "alluvial"}:
         _resolve_value(resolved, mapping.get("value"), fields, label=True)
         return resolved
     if kind in {"raincloud", "ridgeline"}:

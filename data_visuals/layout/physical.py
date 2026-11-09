@@ -31,6 +31,8 @@ def _preferred_aspect(panel):
         return 2.6 / (2.6 + .4 * math.ceil(count / 4))
     if panel.chart_type == "chord":
         return .85 if panel.chart_options.get("summary") else 1.0
+    if panel.chart_type == "alluvial":
+        return 1.55
     if panel.chart_type in THREE_D_CHARTS:
         return 1.0
     if panel.chart_type in ROUND_CHARTS:

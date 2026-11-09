@@ -515,6 +515,11 @@ class Figure:
             })
             subplot_title = decl.get("title")
             chart = create_chart(ct, mapping, title=subplot_title)
+            if ct == "alluvial":
+                chart.mapping["group"] = chart.mapping["stages"][0]
+            if ct == "participant_tracks":
+                if chart.mapping.get("group") is None:
+                    chart.mapping["group"] = "metadata"
             if ct == "chord":
                 # Both endpoints share the source field's registered identity
                 # domain. The target column contributes to that same domain.
@@ -527,7 +532,7 @@ class Figure:
             # Identity registration controls geometry that is computed before
             # rendering (stack order, waterfall depth, chord node order).
             identity_group = chart.mapping.get("group")
-            order_option = ({"bar3d": "group_order", "waterfall3d": "order", "chord": "order"}.get(ct)
+            order_option = ({"bar3d": "group_order", "waterfall3d": "order", "chord": "order", "alluvial": "order"}.get(ct)
                             or ("order" if ct in {"raincloud", "ridgeline"}
                                 and chart.mapping.get("x") == identity_group else None))
             if (order_option and getattr(chart, order_option) is None
@@ -810,6 +815,10 @@ class Figure:
                 custom_categories.setdefault(group, []).extend(
                     pd.concat([df[chart.mapping["source"]], df[chart.mapping["target"]]]).dropna().unique().tolist()
                 )
+        for key, chart in chart_specs.items():
+            if chart.chart_type == "participant_tracks":
+                custom_categories.setdefault(chart.mapping["group"], []).extend(
+                    derived[key]["participant_tracks"]["category_order"])
         for decl in self._subplot_decls.values():
             custom = decl.get("custom_panel")
             if custom is not None and custom.color_group is not None:
@@ -889,7 +898,7 @@ class Figure:
             chart = chart_specs.get((row, col))
             group_col = chart.mapping.get("group") if chart else None
             labels = group_label_maps.get(group_col, _label_map)
-            if group_col and group_col in cdf.columns and labels and chart.chart_type != "chord":
+            if group_col and group_col in cdf.columns and labels and chart.chart_type not in {"chord", "alluvial", "participant_tracks"}:
                 cdf = cdf.copy()
                 cdf[group_col] = cdf[group_col].map(labels).fillna(cdf[group_col])
                 identity = ([group_col, chart.mapping["x"]] if chart.chart_type in {"radar", "circular_bar"}
@@ -917,6 +926,12 @@ class Figure:
         color_domains: Dict[str, List[Any]] = deepcopy(series_order)
         for chart in chart_specs.values():
             group_col = chart.mapping.get("group")
+            if chart.chart_type == "participant_tracks" and group_col not in color_domains:
+                raw = list(dict.fromkeys(custom_categories[group_col]))
+                mapped = [display(group_col, value) for value in raw]
+                if len(set(mapped)) != len(raw):
+                    raise ValueError(f"labels for {group_col!r} must keep native chart identities distinct")
+                color_domains[group_col] = mapped
             if group_col and group_col in df.columns and group_col not in color_domains:
                 values = df[group_col].dropna().unique().tolist()
                 values.extend(custom_categories.get(group_col, []))
@@ -981,6 +996,8 @@ class Figure:
                 legend_counts[(row, col)] = (
                     df[g].nunique() if g in df.columns else measure_count if measure_count > 1 else 0
                 )
+                if chart.chart_type == "participant_tracks":
+                    legend_counts[(row, col)] = len(color_domains.get(g, []))
             if g is None and measure_count > 1 and legend_options.get("scope") == "shared":
                 # Explicitly shared wide-table measures form one virtual group.
                 # Auto keeps the established per-panel multi-metric legends.
@@ -1108,8 +1125,8 @@ class Figure:
         # explicitly rather than inheriting another panel's numeric labels.
         for cell in layout_spec["cells"]:
             decl = self._subplot_decls.get((cell["row"], cell["col"]))
-            from data_visuals.charts.families import ROUND_CHARTS, THREE_D_CHARTS
-            if decl and decl["chart_type"] in ROUND_CHARTS | THREE_D_CHARTS | {"custom", "estimation"}:
+            from data_visuals.charts.families import ROUND_CHARTS, THREE_D_CHARTS, DIAGRAM_CHARTS
+            if decl and decl["chart_type"] in ROUND_CHARTS | THREE_D_CHARTS | DIAGRAM_CHARTS | {"custom", "estimation"}:
                 cell["shared_axes"] = {
                     "x_shared": False, "y_shared": False,
                     "x_shared_with": -1, "y_shared_with": -1,

@@ -28,6 +28,9 @@ def _populate() -> None:
     from data_visuals.renderer.mpl.charts.distribution import _draw_raincloud, _draw_ridgeline
     from data_visuals.renderer.mpl.charts.three_d import _draw_scatter3d, _draw_waterfall3d, _draw_bar3d
     from data_visuals.renderer.mpl.charts.paired import _draw_paired, _draw_estimation
+    from data_visuals.renderer.mpl.charts.alluvial import _draw_alluvial
+    from data_visuals.renderer.mpl.charts.clustered_heatmap import _draw_clustered_heatmap
+    from data_visuals.renderer.mpl.charts.participant_tracks import _draw_participant_tracks
 
     _BUILDERS.update({
         "bar": _draw_bar,
@@ -49,6 +52,9 @@ def _populate() -> None:
         "bar3d": _draw_bar3d,
         "paired": _draw_paired,
         "estimation": _draw_estimation,
+        "alluvial": _draw_alluvial,
+        "clustered_heatmap": _draw_clustered_heatmap,
+        "participant_tracks": _draw_participant_tracks,
     })
 
 

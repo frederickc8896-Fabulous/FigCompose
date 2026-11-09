@@ -22,6 +22,9 @@ charts/ — 图表类型定义层
     - pie / donut — 饼图与环形图
     - radar — 雷达图
     - circular_bar — 独立量尺的同心环条图
+    - chord / raincloud / ridgeline / paired / estimation — 关系、分布与配对图
+    - scatter3d / waterfall3d / bar3d — 原生三维图
+    - participant_tracks / clustered_heatmap / alluvial — 队列、聚类与流图
 """
 
 from __future__ import annotations
@@ -343,4 +346,7 @@ from data_visuals.charts.chord import Chord  # noqa: E402, F401
 from data_visuals.charts.distribution import Raincloud, Ridgeline  # noqa: E402, F401
 from data_visuals.charts.three_d import Scatter3D, Waterfall3D, Bar3D  # noqa: E402, F401
 from data_visuals.charts.paired import Paired, Estimation  # noqa: E402, F401
+from data_visuals.charts.alluvial import Alluvial  # noqa: E402, F401
+from data_visuals.charts.clustered_heatmap import ClusteredHeatmap  # noqa: E402, F401
+from data_visuals.charts.participant_tracks import ParticipantTracks  # noqa: E402, F401
 

@@ -1,7 +1,7 @@
 """Render a fixed canvas; measure decorations without tight layout or cropping."""
 from __future__ import annotations
 
-from data_visuals.charts.families import ROUND_CHARTS, AXISLESS_CHARTS, THREE_D_CHARTS, CARTESIAN_CHARTS
+from data_visuals.charts.families import ROUND_CHARTS, AXISLESS_CHARTS, THREE_D_CHARTS, CARTESIAN_CHARTS, DIAGRAM_CHARTS
 
 from collections import defaultdict
 from collections.abc import Mapping
@@ -445,7 +445,7 @@ def _fit_cell_ticks(ax, zone, box, renderer, cfg, fs, key, width, height, paddin
 def _minimum_plot(sp, cfg, renderer):
     if sp["chart"] == "custom":
         return sp["_custom_panel"].min_size
-    if sp["chart"] in ROUND_CHARTS:
+    if sp["chart"] in ROUND_CHARTS | DIAGRAM_CHARTS:
         return max(60.0, cfg.min_plot_width), max(60.0, cfg.min_plot_height)
     if not cfg.physical:
         return max(20.0, sp["font_sizes"]["tick"] * 2)
@@ -471,7 +471,7 @@ def _minimum_plot(sp, cfg, renderer):
 def _share_facet_axes(records, options):
     """Join ranges explicitly, retaining all panels' data when limits are automatic."""
     ordered = [records[key] for key in sorted(records)
-               if records[key]["subplot"]["chart"] not in ROUND_CHARTS | THREE_D_CHARTS | {"custom"}
+               if records[key]["subplot"]["chart"] not in ROUND_CHARTS | THREE_D_CHARTS | DIAGRAM_CHARTS | {"custom"}
                and records[key]["axes"].name == "rectilinear"]
     if not ordered:
         return
@@ -558,8 +558,10 @@ class _CompositeLegendGlyph(tuple):
 def _visible_identities(sp, column):
     """Observed semantic keys, canonicalized without changing graph endpoints."""
     aliases = sp.get("options", {}).get("category_aliases", {})
-    if sp["chart"] == "chord":
+    if sp.get("chart") == "chord":
         values = sp.get("derived_data", {}).get("chord", {}).get("node_order", [])
+    elif sp.get("chart") == "participant_tracks":
+        values = sp.get("derived_data", {}).get("participant_tracks", {}).get("category_order", [])
     else:
         values = [row[column] for row in sp.get("computed_data", [])
                   if column in row and row[column] is not None]
@@ -851,7 +853,7 @@ def _render(fig, d, cfg, width, height, *, allow_reclaim=True):
         y_label = sp["data"].get("y", "")
         if isinstance(y_label, list):
             y_label = " / ".join(y_label)
-        cartesian = not custom and sp["chart"] not in ROUND_CHARTS | THREE_D_CHARTS
+        cartesian = not custom and sp["chart"] not in ROUND_CHARTS | THREE_D_CHARTS | DIAGRAM_CHARTS
         if cartesian:
             ax.set_xlabel(labels.get("x", sp["data"].get("x", "")), labelpad=cfg.axis_title_padding)
             ax.set_ylabel(labels.get("y", y_label), labelpad=cfg.axis_title_padding)

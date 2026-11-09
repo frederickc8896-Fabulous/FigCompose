@@ -24,10 +24,14 @@ def _default_title(kind: str, declaration: dict[str, Any], index: int, count: in
                    fields: Mapping[str, Any] | None = None) -> str:
     if kind == "histogram":
         metric = declaration.get("x", "")
-    elif kind in {"pie", "donut", "chord", "bar3d"}:
+    elif kind in {"pie", "donut", "chord", "bar3d", "alluvial"}:
         metric = declaration.get("value") or declaration.get("group", "")
     elif kind == "heatmap":
         metric = declaration.get("value", "")
+    elif kind == "participant_tracks":
+        metric = declaration.get("id", "")
+    elif kind == "clustered_heatmap":
+        metric = declaration.get("sample", "")
     elif kind == "confusion":
         vertical = field_label(declaration.get("y", ""), fields or {}, include_unit=False)
         horizontal = field_label(declaration.get("x", ""), fields or {}, include_unit=False)
@@ -125,7 +129,7 @@ def plot(
             raise ValueError(f"plots[{index}]: {error}") from error
 
         if "metric" in declaration:
-            target = "x" if kind == "histogram" else "value" if kind in {"heatmap", "confusion", "pie", "donut", "chord", "bar3d"} else "y"
+            target = "x" if kind == "histogram" else "value" if kind in {"heatmap", "confusion", "pie", "donut", "chord", "bar3d", "alluvial"} else "y"
             if target in declaration:
                 raise ValueError(f"plots[{index}] 的 metric 与 {target} 重复，请只指定其中一个。")
             declaration[target] = declaration.pop("metric")
