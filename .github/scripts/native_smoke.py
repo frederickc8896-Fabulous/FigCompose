@@ -1,4 +1,4 @@
-"""Release-gate smoke for the installed package's 19 native chart kinds.
+"""Release-gate smoke for the installed package's 22 native chart kinds.
 
 Run outside the checkout with python -I; data and outputs are self-contained.
 """
@@ -8,12 +8,15 @@ import argparse
 from importlib import resources
 import json
 from pathlib import Path
+import sys
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import to_hex
 import pandas as pd
+import numpy as np
+import scipy
 
 import data_visuals
 from data_visuals import FigureConfig, plot, check_figure
@@ -22,7 +25,8 @@ from data_visuals.renderer.mpl.config import MplConfig
 
 EXPECTED = {"bar", "line", "scatter", "box", "histogram", "heatmap", "confusion",
             "pie", "donut", "radar", "circular_bar", "chord", "raincloud", "ridgeline",
-            "paired", "estimation", "scatter3d", "waterfall3d", "bar3d"}
+            "paired", "estimation", "scatter3d", "waterfall3d", "bar3d",
+            "alluvial", "participant_tracks", "clustered_heatmap"}
 
 
 def declarations():
@@ -61,6 +65,16 @@ def declarations():
     bars = pd.DataFrame([(x, y, group, value) for x in ("A", "B") for y in ("C", "D")
                          for group, value in (("Part 1", 2), ("Part 2", 3))], columns=["x", "y", "group", "value"])
     result.append(("bar3d", bars, {"kind": "bar3d", "x": "x", "y": "y", "value": "value", "group": "group", "stacked": True}))
+    paths = pd.DataFrame({"start": ["A", "B"], "end": ["B", "A"], "weight": [4, 6]})
+    result.append(("alluvial", paths, {"kind": "alluvial", "stages": ["start", "end"], "metric": "weight"}))
+    cohort = pd.DataFrame({"id": ["P1", "P2", "P3", "P4"], "sex": ["F", "M", "M", "F"],
+                           "age": [22, 30, 35, 46]})
+    result.append(("participant_tracks", cohort, {"kind": "participant_tracks", "id": "id",
+                   "categorical": ["sex"], "numeric": ["age"], "numeric_ranges": {"age": [18, 80]}}))
+    traits = pd.DataFrame({"sample": ["A", "B", "C", "D"], "T1": [-.8, -.6, .5, .9],
+                           "T2": [-.5, -.8, .9, .5]})
+    result.append(("clustered_heatmap", traits, {"kind": "clustered_heatmap", "sample": "sample",
+                   "traits": ["T1", "T2"], "n_clusters": 2}))
     return result
 
 
@@ -120,6 +134,8 @@ def run_native_smoke(output, *, checkout=None, only_kinds=None):
         finally:
             plt.close(rendered)
     result = {"installed": str(installed), "native_count": len(results), "native": results,
+              "versions": {"python": sys.version.split()[0], "matplotlib": matplotlib.__version__,
+                           "numpy": np.__version__, "pandas": pd.__version__, "scipy": scipy.__version__},
               "strict_figure_spec_json": True, "showcase_resources_and_explicit_fonts": True,
               "circular_top_summary_is_native": any(item["kind"] == "circular_bar" for item in results),
               "chord_alias_actual_colors_checked": any(item["kind"] == "chord" for item in results)}

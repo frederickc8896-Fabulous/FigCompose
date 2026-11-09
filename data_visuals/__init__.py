@@ -7,7 +7,7 @@ FigCompose — 规则驱动的论文数据可视化工具
 Layout 决定"放哪里"，Theme 决定"长什么样"。
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from data_visuals.api import plot
 from data_visuals.core.config import FigureConfig
