@@ -1,40 +1,75 @@
-# Alluvial paths / 三阶段平行流图
+# Five-stage alluvial paths / 五阶段复杂平行流图
 
-This **custom Matplotlib template** is managed by FigCompose; it is not an additional native `kind`.
-The same synthetic participants choose A, B or C at three snapshots. Each CSV row is a complete path.
+**1,200 simulated participants · 5 stages · 5 categories · 60 complete paths.**
+The single flow panel contains 25 nodes and 240 ribbons between adjacent stages.
+FigCompose manages the canvas, physical typography, top shared legend and export.
+FigCompose 0.3.0 provides the native `alluvial` kind with serializable computed
+paths and stage marginals.
 
 ```bash
-python -m pip install "FigCompose>=0.2.0"
+python -m pip install "FigCompose>=0.3.0"
 python examples/alluvial_flows/generate.py
-```
-
-```bash
 python examples/alluvial_flows/generate.py --data paths.csv --out my_figure
 ```
 
-| Column | Meaning |
+The default CSV has the following columns. Each row gives an entire observed route
+and the number of simulated participants following it.
+
+| Column | Stage |
 |---|---|
-| `entry` | Initial category |
-| `decision` | Category after trial |
-| `outcome` | Final category |
-| `count` | Finite positive integer count of participants following that entire path |
+| `entry` | Initial choice |
+| `explore` | Exploration |
+| `trial` | First trial |
+| `decision` | Reassessment |
+| `outcome` | Final choice |
+| `count` | Positive integer participant count |
 
-Node heights and ribbon widths use **one common count scale** at all stages. Every path retains its weight,
-and each node's incoming/outgoing path heights sum exactly to its height. Total counts are identical across stages.
-Colors identify the initial choice, even when participants move to another category.
-Neutral node labels show the current category, its count and its percentage of the entire cohort.
-The thin colored stripe within each node retains the original path slots, showing the same initial-choice composition as the incoming and outgoing bands.
-Repeated identical paths are summed; absent combinations are not invented or filled with extra participants.
-The curves show observed transitions, not a causal effect or a new statistical test.
+The generator reads 2–8 stage columns followed by `count`.
+Stage order follows the CSV header. Repeated identical complete paths are
+summed before drawing. All path labels must be nonempty strings.
 
-中文：这类图适合同一批对象在多个时点的类别变化。只需提供完整路径和对应人数，模板就能复用。
-每阶段使用相同的宽度尺度，带子变粗表示人数更多，不能把颜色当成每个时点的当前类别。
-节点中分别显示当前类别、人数及占全队列的比例；细色条按原始路径槽位显示初始类别组成，仍沿用图例的颜色含义。
-所有数据均为模拟数据。
+Node heights and ribbon widths share **one people-to-height scale** across all stages.
+Each path occupies exactly the same height at every stage. The five columns each total
+1,200 people. Node labels show the current category, its count and its share of the cohort.
+Colors identify the initial category throughout the entire path; both edges of each
+node show the initial-category composition in its actual path slots.
 
-`style.yaml` reuses `modern`, Times New Roman and `curated-5-default`; the three initial choices use existing red, teal and navy swatches.
-Times New Roman must be installed locally; otherwise a serif fallback is used.
-The script works from another current directory and exports `figure.png` (300 dpi), `figure.svg` and `preview.png`.
-Keep `examples/_export.py` when copying this example. [All examples](../README.md).
+At each node, paths are ordered by initial category, neighboring category and the full
+route. Thin white boundaries separate individual routes. The existing
+`curated-5-default` colors remain in their original order:
+`#e63946 / #fedfd4 / #94d2bd / #0077b6 / #1d3557`.
 
-![Conserved three-stage flows](preview.png)
+The white canvas is 320 × 220 mm, with Times New Roman, a 23 pt main title and
+text of at least 9.5 pt. `figure.png` is 300 dpi; `figure.svg` is vector;
+`preview.png` is 120 dpi. Keep `examples/_export.py` when copying the example.
+The native declaration is `figure[0, 0].alluvial(stages=[...], value="count")`;
+`plot()` also accepts `kind="alluvial"`, `stages=[...]`, `metric="count"`.
+The native kind supports positive real weights and finite string/numeric category IDs;
+this participant-count example requires positive integer counts and string labels.
+
+## Rebuild the synthetic data
+
+```bash
+python examples/alluvial_flows/simulate.py
+python examples/alluvial_flows/simulate.py --participants 1800 --seed 20261109 --out paths.csv
+```
+
+`simulate.py` uses the Python standard library and seed `20261109`. Twelve route motifs
+per initial category cover stable choices, gradual switches, returns and multi-step
+exploration. Weighted integer counts allocate exactly 1,200 people across 60 routes;
+individual route counts range from 8 to 53. Re-running the default command reproduces
+the same CSV bytes.
+
+The original 300-person, 17-path input is retained in `data_three_stage.csv`:
+
+```bash
+python examples/alluvial_flows/generate.py --data examples/alluvial_flows/data_three_stage.csv --out three_stage
+```
+
+中文：默认图把五个阶段排在同一幅流图中，60条完整路径在相邻阶段间形成240段流带。
+每阶段合计1200人，颜色全程追踪初始类别；节点旁的比例以全队列人数为分母。
+适合队列分组变化、偏好迁移和多阶段用户路径。全部数据可由固定种子重新生成。
+
+[All examples](../README.md)
+
+![Five-stage conserved alluvial paths](preview.png)

@@ -34,12 +34,12 @@ When results change, reuse the same visual settings with less manual adjustment.
 Requires Python 3.10+:
 
 ```bash
-python -m pip install FigCompose
+python -m pip install "FigCompose>=0.3.0"
 ```
 
 The package is named **FigCompose**; Python imports use `data_visuals`.
-**FigCompose 0.2.0** includes **19 native chart types**, all 13 curated palettes and the `showcase` presentation style. Upgrade older installations with `python -m pip install --upgrade FigCompose`.
-The hero image above demonstrates 11 chart types; distribution, paired-data, chord and 3D charts are also available in 0.2.0.
+**FigCompose 0.3.0** includes **22 native chart types**, all 13 curated palettes and the `general`, `modern` and `showcase` styles. Upgrade older installations with `python -m pip install --upgrade "FigCompose>=0.3.0"`.
+The hero image above demonstrates 11 chart types; the full set also includes distribution, paired-data, chord, 3D, participant-track, clustered-heatmap and alluvial charts.
 The default font is **Times New Roman**, supplied by your system; other serif fonts are used as fallbacks.
 
 <details>
@@ -63,7 +63,7 @@ python -m pip install -e .
 Update a PyPI installation:
 
 ```bash
-python -m pip install --upgrade FigCompose
+python -m pip install --upgrade "FigCompose>=0.3.0"
 ```
 
 </details>
@@ -126,7 +126,7 @@ For more complex settings, give your assistant the [API reference](https://githu
 
 ## Ready-to-run examples
 
-Download or clone the example folders, install `FigCompose>=0.2.0`, and run a complete example. Each folder includes its actual CSV, saved style, code and expected image.
+Download or clone the example folders, install `FigCompose>=0.3.0`, and run a complete example. Each folder includes its actual CSV, saved style, code and expected image.
 
 | Start here | What you can reproduce |
 |---|---|
@@ -135,11 +135,11 @@ Download or clone the example folders, install `FigCompose>=0.2.0`, and run a co
 | [Concentric scores](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/circular_scores) | The native circular-bar chart, with 40 scores and independent scales |
 
 Run, for example, `python examples/circular_scores/generate.py --out output/circular`.
-[Browse all eight examples](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md), including native 2D/3D comparisons and chords, plus custom templates for participant tracks, circular clustering and alluvial flows.
+[Browse all eight examples](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md), including native 2D/3D comparisons, chords, participant tracks, circular clustering and alluvial flows. All eight use native chart declarations available in FigCompose 0.3.0.
 
 ## Supported charts
 
-FigCompose 0.2.0 supports the following 19 native `kind` values.
+FigCompose 0.3.0 supports the following 22 native `kind` values.
 
 | Chart | `kind` | Common uses |
 |---|---|---|
@@ -159,6 +159,9 @@ FigCompose 0.2.0 supports the following 19 native `kind` values.
 | 3D scatter | `scatter3d` | Measured X/Y/Z points and explicitly selected projection planes |
 | 3D waterfall | `waterfall3d` | Ordered series in depth, with a declared baseline |
 | 3D bars | `bar3d` | Complete category grids and explicit component stacks |
+| Participant tracks | `participant_tracks` | Aligned categorical and explicitly scaled numeric cohort tracks |
+| Circular clustered heatmap | `clustered_heatmap` | Raw trait matrix, actual Ward distances and cluster annotations |
+| Alluvial flows | `alluvial` | Complete weighted paths with conserved marginals across 2–8 stages |
 
 For repeated observations, bars, lines, radar plots and heatmaps default to means within their respective groups. Pie and donut charts sum values by category, or count rows when the value column is omitted; scatter plots retain observations.
 Circular bars use independent score scales rather than shares of a total. Repeated object/metric pairs require an explicit aggregation choice.

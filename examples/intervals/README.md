@@ -14,8 +14,8 @@ changes in percentage points. They describe different summaries and are labeled 
 雨云的大数字是中位数，配对与估计图的大数字是均值差，单位均为百分点。所有原始点、配对线和区间完整保留。
 
 ```bash
-# Native statistical charts and showcase style are included in FigCompose 0.2.0:
-python -m pip install "FigCompose>=0.2.0"
+# Native statistical charts and showcase style are included in FigCompose 0.3.0:
+python -m pip install "FigCompose>=0.3.0"
 python examples/intervals/generate_series.py
 python examples/intervals/generate_series.py --view raincloud --condition 4 --out my_raincloud
 ```
@@ -39,7 +39,7 @@ The original supplied-bound example remains available below, including its asymm
 ![Expected output / 预期效果](preview.png)
 
 ```bash
-python -m pip install "FigCompose>=0.2.0"
+python -m pip install "FigCompose>=0.3.0"
 python examples/intervals/generate.py
 ```
 

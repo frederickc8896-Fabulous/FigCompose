@@ -3,7 +3,7 @@
 ![Expected output / 预期效果](preview.png)
 
 ```bash
-python -m pip install "FigCompose>=0.2.0"
+python -m pip install "FigCompose>=0.3.0"
 python examples/mixed_figure/generate.py
 ```
 

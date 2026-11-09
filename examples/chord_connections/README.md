@@ -5,7 +5,7 @@ The synthetic example connects six research domains. Each CSV row is one undirec
 
 ```bash
 # Install FigCompose and run the example from the repository root:
-python -m pip install "FigCompose>=0.2.0"
+python -m pip install "FigCompose>=0.3.0"
 python examples/chord_connections/generate.py
 ```
 
@@ -59,7 +59,7 @@ and white boundaries make their crossings easier to trace without covering the c
 FigCompose measures the height at a fixed width of 210 mm, with equal coordinate
 scales. Labels use measured radial placement or two spaced columns for dense
 domains and long names; fonts are not shrunk to make them fit.
-The native chord and `showcase` style are available in FigCompose 0.2.0 and later.
+Use FigCompose 0.3.0 or later for this native chord and `showcase` example.
 
 中文：修改 `data.csv` 中的对象对及权重即可复用。外侧弧长表示该组关联权重之和，弦两端的角宽共同表示同一权重。
 这是原生 `chord` 无向关联图，不能把弦的颜色或空间位置当作因果或流向。外侧刻度间隔按数据和物理尺寸自动选择，内侧细环分片对应原连接端点。

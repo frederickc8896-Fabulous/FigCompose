@@ -34,12 +34,12 @@
 需要 Python 3.10+：
 
 ```bash
-python -m pip install FigCompose
+python -m pip install "FigCompose>=0.3.0"
 ```
 
 包名为 **FigCompose**，Python 导入使用 `data_visuals`。
-**FigCompose 0.2.0** 已包含 **19 种原生图表**、全部 13 套精选配色及 `showcase` 展示风格。旧安装可用 `python -m pip install --upgrade FigCompose` 更新。
-上方首屏组图实际展示 11 种图表；0.2.0 还支持分布、配对、弦图与三维图。
+**FigCompose 0.3.0** 包含 **22 种原生图表**、全部 13 套精选配色及 `general`、`modern`、`showcase` 三种风格。旧安装可用 `python -m pip install --upgrade "FigCompose>=0.3.0"` 更新。
+上方首屏组图实际展示 11 种图表；完整图种还包括分布、配对、弦图、三维图、环形多轨、环形聚类热图与多阶段流图。
 默认字体为 **Times New Roman**，由系统提供；缺少时回退其他衬线字体。
 
 <details>
@@ -63,7 +63,7 @@ python -m pip install -e .
 更新 PyPI 安装：
 
 ```bash
-python -m pip install --upgrade FigCompose
+python -m pip install --upgrade "FigCompose>=0.3.0"
 ```
 
 </details>
@@ -126,7 +126,7 @@ fig.render("figure.png", dpi=300)
 
 ## 可直接复现的示例
 
-下载或克隆示例目录，安装 `FigCompose>=0.2.0` 后即可运行完整示例。每个目录包含实际 CSV、风格配置、脚本和预期成图。
+下载或克隆示例目录，安装 `FigCompose>=0.3.0` 后即可运行完整示例。每个目录包含实际 CSV、风格配置、脚本和预期成图。
 
 | 从这里开始 | 可以复现什么 |
 |---|---|
@@ -135,11 +135,11 @@ fig.render("figure.png", dpi=300)
 | [同心环条](https://github.com/frederickc8896-Fabulous/FigCompose/tree/main/examples/circular_scores) | 原生环条图，40 个分数，各指标使用独立量尺 |
 
 例如运行 `python examples/circular_scores/generate.py --out output/circular`。
-[查看全部八个示例](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md)，另有原生二维三维对照、原生弦图，以及环形多轨、环形聚类和桑基流图的现成自定义模板。
+[查看全部八个示例](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/examples/README.md)，包含原生二维三维对照、弦图、环形多轨、环形聚类和桑基流图。八例均使用 FigCompose 0.3.0 已包含的原生图种。
 
 ## 支持哪些图
 
-FigCompose 0.2.0 支持下列 19 个原生 `kind` 值。
+FigCompose 0.3.0 支持下列 22 个原生 `kind`。
 
 | 图种 | `kind` | 常见用法 |
 |---|---|---|
@@ -159,6 +159,9 @@ FigCompose 0.2.0 支持下列 19 个原生 `kind` 值。
 | 三维散点 | `scatter3d` | 实测 X/Y/Z 坐标与显式指定的投影平面 |
 | 三维瀑布曲线 | `waterfall3d` | 按系列顺序排列的深度轴，基线明确声明 |
 | 三维柱图 | `bar3d` | 完整类别网格与显式分项堆叠 |
+| 环形多轨 | `participant_tracks` | 同一队列的分类轨与显式量尺数值轨 |
+| 环形聚类热图 | `clustered_heatmap` | 原始指标矩阵、真实 Ward 距离与分组注释 |
+| 多阶段流图 | `alluvial` | 2–8 阶段完整加权路径，各阶段边际总量守恒 |
 
 有重复观测时，柱图、折线、雷达及热力图默认按对应分组取均值；饼图与环形图按类别求和，省略数值列时计数；散点图保留观测。
 环条图使用独立分数量尺，表示的不是总量中的份额；重复对象/指标组合需明确指定汇总方式。

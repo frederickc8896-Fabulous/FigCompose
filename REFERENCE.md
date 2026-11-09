@@ -2,9 +2,9 @@
 
 [English overview](README.md) · [中文概览](README.zh-CN.md) · [Runnable examples](examples/README.md)
 
-Import from `data_visuals`. **FigCompose 0.2.0** provides **19 native kinds**,
-`showcase` and circular summary placement. Install or upgrade with
-`python -m pip install --upgrade "FigCompose>=0.2.0"`.
+Import from `data_visuals`. **FigCompose 0.3.0** provides **22 native kinds**, 13 curated
+palettes and the `general`, `modern` and `showcase` styles. Install or upgrade with
+`python -m pip install --upgrade "FigCompose>=0.3.0"`.
 
 [Customization](#defaults-and-customization) · [Charts](#data-and-chart-behavior) · [Configuration](#paper-configuration) · [Canvas](#canvas-and-axes) · [Legends](#legends) · [Advanced charts](#advanced-chart-options) · [Checks](#figure-checks-and-layout-snapshots)
 
@@ -55,11 +55,22 @@ Each declaration is one panel. Panel fields override figure defaults; `group=Non
 | `scatter3d` | Explicit `x`, `y`, `z`, optional `group` | Three measured coordinates |
 | `waterfall3d` | `x` position, `metric`, `group`, `baseline` | Series index supplies depth |
 | `bar3d` | `x`, `y` categories, `metric` amount, optional `group` | Complete grid; explicit stacks |
+| `participant_tracks` | `id`, `categorical=[...]`, `numeric=[...]`, `numeric_ranges={...}` | Unique people; 1–3 categorical and 1–2 numeric tracks; descriptive summaries |
+| `clustered_heatmap` | `sample`, `traits=[...]`, optional `value_range/n_clusters` | Raw wide matrix; Ward/Euclidean with optimal leaf ordering |
+| `alluvial` | `stages=[...]`, `metric` weight | Positive finite complete-path weights; identical paths summed; 2–8 stages |
 
 `metric` maps to `y` for ordinary/value charts, `x` for histograms, and `value` for
-matrix, pie, chord and 3D-bar charts. Map all three `scatter3d` coordinates explicitly.
+matrix, pie, chord, alluvial and 3D-bar charts. Map all three `scatter3d` coordinates explicitly.
 Pie values must be finite, nonnegative and have a positive total. Radar does not normalize
 scores or fill missing axes. Units, pairing and statistical definitions are never inferred.
+Participant numeric ranges are explicit, with optional `numeric_ticks`, `category_orders`,
+`order_by` and `track_labels`; `group` names the combined category color domain (default `metadata`).
+Clustering uses the supplied traits without standardization or imputation; `value_range` defaults
+to `[-1,1]`, `n_clusters=4`, `label_every=2`; `cluster_colors` and `chart_opts.color_scheme` override colors.
+Alluvial colors follow the first stage, node percentages divide by total path weight,
+`order` sets initial category order (registered `series` supplies the default),
+and `stage_titles`/`note` customize annotations. Small weighted nodes that cannot fit
+their labels raise `LayoutError`.
 
 ## Paper configuration
 

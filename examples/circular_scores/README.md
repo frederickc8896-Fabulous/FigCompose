@@ -3,11 +3,11 @@
 ![Expected output / 预期效果](preview.png)
 
 ```bash
-python -m pip install "FigCompose>=0.2.0"
+python -m pip install "FigCompose>=0.3.0"
 python examples/circular_scores/generate.py
 ```
 
-Requires FigCompose 0.2.0 or later / 需要 FigCompose 0.2.0 及以上版本。
+Requires FigCompose 0.3.0 or later / 需要 FigCompose 0.3.0 及以上版本。
 
 **English.** Native `kind="circular_bar"` includes the mean summary strip in the same panel.
 `summary="mean"` requests the computation and `summary_position="top"` places its large values

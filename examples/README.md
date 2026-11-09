@@ -1,17 +1,21 @@
 # Reproducible FigCompose examples / 可复现示例
 
-Install **`FigCompose>=0.2.0`**, download or clone the example folders, then run a generator.
+Install **`FigCompose>=0.3.0`**, download or clone the example folders, then run a generator.
 Each example includes its actual CSV, a reusable `style.yaml`, the complete script and a preview.
-FigCompose 0.2.0 includes 19 native kinds, the `showcase` style and circular summary placement.
+FigCompose 0.3.0 includes 22 native kinds, 13 curated palettes and the `general`, `modern`
+and `showcase` styles, including native circular summary placement.
 The updated [2D/3D comparison](three_dimensional_views/README.md), [circular scores](circular_scores/README.md),
 [native chord](chord_connections/README.md) and [six-view distribution series](intervals/README.md)
 use native declarations and reusable presentation rules.
+Participant tracks, circular clustering and alluvial flows use the native
+`participant_tracks`, `clustered_heatmap` and `alluvial` kinds included in this release.
 
-安装 **`FigCompose>=0.2.0`**，下载或克隆示例目录后运行脚本。FigCompose 0.2.0包含19种原生图、`showcase`及环条摘要位置。
+安装 **`FigCompose>=0.3.0`**，下载或克隆示例目录后运行脚本。FigCompose 0.3.0包含22种原生图、13套精选配色和 `general`、`modern`、`showcase` 三种风格。
 每个示例包含实际 CSV、统一风格配置、完整代码和预期效果；无需本地 demo 或开发目录。
+环形多轨、环形聚类和多阶段流图均使用此版本已包含的标准入口。
 
 ```bash
-python -m pip install "FigCompose>=0.2.0"
+python -m pip install "FigCompose>=0.3.0"
 python examples/mixed_figure/generate.py
 python examples/intervals/generate.py
 python examples/intervals/generate_series.py
@@ -27,17 +31,14 @@ python examples/circular_scores/generate.py
 | [Circular clustering / 环形聚类](clustered_heatmap/README.md) | Actual Ward tree, signed values and cluster annotations / 真实聚类树、数值轨与分组注释 | ![Circular clustering](clustered_heatmap/preview.png) |
 | [2D / 3D comparison / 二维三维对照](three_dimensional_views/README.md) | Six native panels, overview and enlarged carousel panels / 六格原生同源对照、总览与放大轮播图 | ![Paired views](three_dimensional_views/preview.png) |
 | [Chord connections / 弦图](chord_connections/README.md) | Native weighted undirected relationships / 原生弦图按真实权重分配两端与节点弧长 | ![Chord connections](chord_connections/preview.png) |
-| [Alluvial flows / 桑基流图](alluvial_flows/README.md) | Conserved participant counts over three stages / 三阶段、同一批人的类别流向 | ![Alluvial flows](alluvial_flows/preview.png) |
+| [Alluvial flows / 桑基流图](alluvial_flows/README.md) | 60 complete paths across five stages / 五阶段、五类别的60条完整路径 | ![Alluvial flows](alluvial_flows/preview.png) |
 
-Mixed figure, circular scores, the six-view interval series, 2D/3D comparison and
-chords now use native chart declarations throughout. Their defaults remain reusable
-through the ordinary `style`, `palette` and chart options. Participant tracks,
-circular clustering and alluvial flows still provide complete `Figure.custom`
-templates; these three are not additional native `kind` values. The original
-supplied-bound interval generator remains available alongside the six-view series.
+All eight examples use native chart declarations throughout. Their defaults remain reusable
+through `style`, `palette` and chart options, with portable JSON Figure specifications.
+The original supplied-bound interval generator remains available alongside the six-view series.
 
 四图组合、环条、六图统计系列、二维三维对照和弦图均全部使用原生声明，通过既有 `style`、`palette` 和图种选项复用呈现规则。
-环形多轨、环形聚类和桑基流图仍提供完整的 `Figure.custom` 模板，可读取新 CSV 复用，这三类没有注册为额外原生图种。
+环形多轨、环形聚类和多阶段流图通过同一套数据计算、布局与渲染管线实现，可读取新CSV并导出严格JSON规格。
 原有给定边界的区间入口继续保留。复制示例时请一并保留公共导出文件 `examples/_export.py`。
 
 All observations are synthetic. Default typography requests Times New Roman from the operating system;
