@@ -7,7 +7,6 @@ import argparse
 from pathlib import Path
 import runpy
 
-import numpy as np
 import pandas as pd
 from data_visuals import FigureConfig
 from data_visuals.core import Figure
@@ -17,29 +16,29 @@ HERE = Path(__file__).resolve().parent
 
 def build_figure(data_path=None, profile_path=None):
     frame = pd.read_csv(data_path or HERE / "data.csv", keep_default_na=False)
-    panel = runpy.run_path(str(HERE / "panel.py"))
-    required = {"participant", "age", "bmi", "sex", "ethnicity", "response"}
-    if not required.issubset(frame) or len(frame) < 3:
-        raise ValueError("Supply at least three participants and the six documented columns.")
-    if frame.participant.duplicated().any() or (frame.participant.astype(str).str.len() == 0).any():
-        raise ValueError("Participant IDs must be nonempty and unique.")
-    for name, low, high in (("age", 18, 80), ("bmi", 15, 42)):
-        values = pd.to_numeric(frame[name], errors="raise")
-        if not np.isfinite(values).all() or not values.between(low, high).all():
-            raise ValueError(f"{name} must be finite and within [{low}, {high}].")
-        frame[name] = values
-    for column, categories in (("sex", panel["SEX"]), ("ethnicity", panel["ETHNICITY"]),
-                               ("response", panel["RESPONSE"])):
-        if not frame[column].isin(categories).all():
-            raise ValueError(f"Unknown {column} categories; see this example's README.")
-    frame = frame.sort_values(["age", "participant"], kind="stable").reset_index(drop=True)
     config = FigureConfig.load(profile_path or HERE / "style.yaml")
-    paper = Figure(rows=1, cols=1, canvas={"width": 230, "height": 250}, config=config,
+    paper = Figure(frame, rows=1, cols=1, canvas={"width": 230, "height": 250}, config=config,
                    title="Participant metadata | Aligned circular tracks")
-    paper[0, 0].custom(panel["draw_participant_ring"], payload=frame,
-                       color_group="metadata", categories=panel["CATEGORIES"],
-                       limits=((-1.36, 1.36), (-1.44, 1.28)), min_size=(490, 490),
-                       preferred_aspect=1, box_aspect=1)
+    paper[0, 0].participant_tracks(
+        id="participant", categorical=["sex", "ethnicity", "response"], numeric=["bmi", "age"],
+        group="metadata", numeric_ranges={"bmi": [15, 42], "age": [18, 80]},
+        numeric_ticks={"bmi": [15, 28, 42], "age": [18, 49, 80]}, order_by="age",
+        category_orders={"sex": ["Female", "Male"],
+                         "ethnicity": ["Asian", "Black", "Caucasian", "Hispanic"],
+                         "response": ["Sensitive", "Intermediate", "Resistant"]},
+        track_labels={"sex": "Sex", "ethnicity": "Ethnicity", "response": "Response",
+                      "bmi": "BMI", "age": "Age\n(years)"},
+        numeric_colors={"bmi": "Male", "age": "Black"}, center_color="Intermediate", accent_color="Black",
+        center_note="Synthetic cohort", order_label="Ordered by age",
+        note="Inside → out: sex, ethnicity, response, BMI and age.\n"
+             "The open sector summarises the same cohort; all values are simulated.",
+        chart_opts={"series_styles": {
+            category: {"label": f"{heading}: {category}"}
+            for heading, categories in (("Sex", ("Female", "Male")),
+                                        ("Ethnicity", ("Asian", "Black", "Caucasian", "Hispanic")),
+                                        ("Response", ("Sensitive", "Intermediate", "Resistant")))
+            for category in categories}},
+    )
     return paper
 
 

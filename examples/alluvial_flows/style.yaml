@@ -1,13 +1,19 @@
-theme: modern
+theme: showcase
 palette: curated-5-default
 font_family: Times New Roman
+font_sizes:
+  main_title: 23
+  title: 13
 legend:
   scope: shared
   position: top
-  ncols: 3
-  fontsize: 9
+  ncols: 5
+  fontsize: 11
+  gap: 3
 category_colors:
   entry:
     A: '#e63946'
-    B: '#94d2bd'
-    C: '#1d3557'
+    B: '#fedfd4'
+    C: '#94d2bd'
+    D: '#0077b6'
+    E: '#1d3557'
