@@ -26,6 +26,9 @@ python examples/three_dimensional_views/generate.py --view projections --out out
 ```
 
 Use FigCompose 0.3.0 or later for this native 2D/3D comparison.
+The opaque-waterfall occlusion fix is currently available in the source checkout;
+install it from the repository root with `python -m pip install -e .` to reproduce
+the updated waterfall outlines and depth ordering.
 All six panels now use native FigCompose declarations: `line`, `scatter`, `bar`,
 `waterfall3d`, `scatter3d` and `bar3d`. They share one canvas, fonts and preset
 colors through the reusable `showcase` style. No callbacks, manual Axes or
@@ -49,6 +52,9 @@ sort their faces together. Splitting the three components into separate collecti
 can produce incorrect cross-layer occlusion even when the heights are correct.
 Original 3D scatter points also share one collection, including per-point marker
 shapes and colours, so groups do not receive independent depth orderings.
+Waterfall fills and their native outlines/markers draw together for each depth plane.
+The example explicitly uses `fill_alpha=1`; `fill_alpha` below one opts into transparent
+layers, while `fill=False` draws profiles alone. Layer order updates with the camera.
 
 The native interfaces work with other category counts and numeric domains:
 
@@ -81,6 +87,7 @@ projected tops with physical text offsets, rather than changing their heights.
 九个柱顶数字是对应三分项的真实总和，填充轮廓与留白只改变呈现。
 默认同时导出六格总览与三张独立对照，便于社交平台分图查看细节；`--view`可单独选择。
 本例已全部迁为原生声明，三维点的颜色/点形与柱块的深度排序由库统一处理。
+瀑布填面使用不透明设置，每层轮廓与填面共同按相机深度绘制；本次遮挡修复需安装当前源码。
 导出PNG、SVG和预览；三维深度排序与内部遮挡仍需要人工检查。
 
 [All examples](../README.md) · [FigCompose](../../README.md)

@@ -63,7 +63,7 @@ def add_profiles(paper, row, data):
                                  "yticks": [0, 8, 16, 24, 32],
                                  "series_styles": {group: {"linewidth": 1.5} for group in GROUPS}})
     paper[row, 2].waterfall3d(x="x", y="signal", group="series", baseline=0,
-                             where={"view": "profile"}, linewidth=1.7,
+                             where={"view": "profile"}, linewidth=1.7, fill_alpha=1,
                              elev=27, azim=-58, box_aspect=(1.6, 1.05, .95), zoom=1.09,
                              title="Separate them in depth",
                              chart_opts={"xlim": [0, 8], "ylim": [-.25, 3.25], "zlim": [0, 32],
