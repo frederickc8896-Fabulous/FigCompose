@@ -10,7 +10,7 @@ palettes and the `general`, `modern` and `showcase` styles. Install or upgrade w
 
 ## Defaults and customization
 
-The 13 delivered figures are example compositions, not locked appearances.
+The runnable examples demonstrate editable compositions.
 Native kinds provide drawing and measurement rules; configuration supplies editable defaults.
 
 | Control | Setting |
@@ -25,11 +25,12 @@ Native kinds provide drawing and measurement rules; configuration supplies edita
 
 Explicit settings override applicable defaults. Category color precedence is
 **palette → `series.color` → `category_colors` → panel `series_styles`**.
-All four example profiles pin colors: changing only `palette` will not replace them.
-Edit or remove the explicit color entries; for the interval series, check both
-`series` and `category_colors`. Explicit fonts, sizes and panel legend settings also override themes.
-Some builders specify canvas/layout directly (03, 05, 06); edit those declarations for a different
-composition. Internal geometry is governed by each kind's supported options.
+Several example profiles pin series colors: changing only `palette` will not replace those overrides.
+Edit or remove the explicit color entries; for the [interval series](examples/intervals/README.md),
+check both `series` and `category_colors`. Explicit fonts, sizes and panel legend settings also override themes.
+The [2D/3D comparison](examples/three_dimensional_views/README.md),
+[chord](examples/chord_connections/README.md) and interval-series builders set canvas/layout directly;
+edit those declarations for a different composition. Internal geometry follows each kind's supported options.
 
 ## Data and chart behavior
 
@@ -76,6 +77,8 @@ their labels raise `LayoutError`.
 
 Save/load a `FigureConfig` as YAML or JSON and reuse it across figures. Register the complete series
 domain, including IDs absent from a particular CSV, to preserve colors, markers, line styles and order.
+The configuration saves visual defaults and series/field metadata; panel declarations remain in Python.
+After updating data, call `plot(new_data, config=paper, ...)` to build the next figure with the same settings.
 
 ```python
 from data_visuals import FigureConfig, plot
