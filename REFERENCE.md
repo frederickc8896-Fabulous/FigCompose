@@ -190,6 +190,10 @@ Duplicates require explicit aggregation. Bar ordering uses `x_order/y_order/grou
 `label_totals` and `total_format` control totals. Camera options are `elev/azim/box_aspect/zoom`
 and `proj_type="ortho" / "persp"`. [Six-panel and carousel examples](examples/three_dimensional_views/README.md).
 
+In the current source, `waterfall3d` defaults to opaque fills (`fill_alpha=1`). Each depth plane's
+fill and native lines draw together; explicit `fill_alpha` values in [0,1] allow transparency,
+and `fill=False` keeps lines alone. Filled profiles use camera depth and reject per-series `zorder`.
+
 ## Figure checks and layout snapshots
 
 `report = fig.check(debug="layout.png")` measures final text/layout/style without changing the figure.

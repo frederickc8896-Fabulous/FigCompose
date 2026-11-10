@@ -78,7 +78,7 @@ class Waterfall3D(_ThreeD):
     order: list[Any] | None = None
     depth_spacing: float = 1
     fill: bool = True
-    fill_alpha: float = .82
+    fill_alpha: float = 1
     linewidth: float | None = None
     markers: bool = False
 

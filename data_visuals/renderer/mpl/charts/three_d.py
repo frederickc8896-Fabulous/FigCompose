@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 import numpy as np
-from matplotlib.collections import PolyCollection
 from matplotlib.lines import Line2D
 from matplotlib.markers import MarkerStyle
 from matplotlib.patches import Patch
 from matplotlib.transforms import ScaledTranslation
 from mpl_toolkits.mplot3d import proj3d
-from mpl_toolkits.mplot3d.art3d import Line3DCollection, Path3DCollection
+from mpl_toolkits.mplot3d.art3d import Line3D, Line3DCollection, Path3DCollection, Poly3DCollection
 
 from data_visuals.core.identity import numeric_format_function
 from .helpers import frame, grouped, series_color, series_style
@@ -32,6 +31,46 @@ def _point_paths(collection, paths):
     collection.__class__ = _SeriesPath3DCollection
     collection._figcompose_paths = tuple(paths)
     collection.set_paths(paths)
+
+
+class _WaterfallLine3D(Line3D):
+    """Keep native, editable lines while their filled profile owns drawing."""
+
+    def draw(self, renderer):
+        if self._figcompose_profile_owner._drawing_profile:
+            super().draw(renderer)
+
+
+class _WaterfallProfile3D(Poly3DCollection):
+    """Draw one parallel plane's fill and lines as a single depth-sorted unit."""
+
+    def __init__(self, vertices, anchor, lines, **kwargs):
+        self._figcompose_anchor = anchor
+        self._figcompose_profile_lines = tuple(lines)
+        self._drawing_profile = False
+        super().__init__([vertices], **kwargs)
+        for line in lines:
+            line.__class__ = _WaterfallLine3D
+            line._figcompose_profile_owner = self
+
+    def do_3d_projection(self, *args, **kwargs):
+        super().do_3d_projection(*args, **kwargs)
+        # Common X/Z coordinates make ordering depend only on the parallel
+        # depth planes, independent of curve height and sampling density.
+        return float(proj3d.proj_transform(*self._figcompose_anchor,
+                                          self.axes.get_proj())[2])
+
+    def draw(self, renderer):
+        if not self.get_visible():
+            return
+        super().draw(renderer)
+        self._drawing_profile = True
+        try:
+            for line in self._figcompose_profile_lines:
+                if line.axes is self.axes:
+                    line.draw(renderer)
+        finally:
+            self._drawing_profile = False
 
 
 def _alias(value, opts):
@@ -137,7 +176,7 @@ def _draw_waterfall3d(ax, sp, cfg, color_map):
         return []
     payload = _payload(sp, "waterfall3d")
     opts, mapping = sp.get("options", {}), sp["data"]
-    polygons, facecolors, depths, handles = [], [], [], []
+    filled_profiles, depths, handles = [], [], []
     all_x, all_values = [], [payload["baseline"]]
     profiles = list(payload["profiles"])
     series_order = opts.get("order") or opts.get("series_order")
@@ -148,32 +187,40 @@ def _draw_waterfall3d(ax, sp, cfg, color_map):
         key = _alias(item["group"], opts)
         color = series_color(key, index, cfg, color_map or {}, opts)
         style = _validated_style(series_style(key, opts))
+        if opts.get("fill", True) and "zorder" in style:
+            raise ValueError("filled waterfall3d profiles use camera depth; per-series zorder is not supported")
         x, values = np.asarray(item["x"]), np.asarray(item["value"])
         depth = index * payload["depth_spacing"]
         width = style.get("linewidth", opts.get("linewidth"))
         width = cfg.line_stroke_width if width is None else width
         marker = style.get("marker", "o") if opts.get("markers", False) else None
-        ax.plot(x, np.full(len(x), depth), values, color=color, linewidth=width,
+        outline, = ax.plot(x, np.full(len(x), depth), values, color=color, linewidth=width,
                 linestyle=style.get("linestyle", "-"), marker=marker,
                 markersize=np.sqrt(style.get("size", cfg.marker_size)),
                 markerfacecolor=style.get("facecolor", color),
                 markeredgecolor=style.get("edgecolor", color), zorder=style.get("zorder", 2))
         if opts.get("fill", True):
             baseline = payload["baseline"]
-            polygons.append([(x[0], baseline), *zip(x, values), (x[-1], baseline)])
-            facecolors.append(color)
-            ax.plot((x[0], x[-1]), (depth, depth), (baseline, baseline),
-                    color=color, linewidth=max(.4, width*.68))
+            vertices = [(x[0], depth, baseline),
+                        *zip(x, np.full(len(x), depth), values), (x[-1], depth, baseline)]
+            lower, = ax.plot((x[-1], x[-1], x[0], x[0]), (depth,)*4,
+                             (values[-1], baseline, baseline, values[0]),
+                             color=color, linewidth=max(.4, width*.68))
+            filled_profiles.append((vertices, depth, color, (outline, lower)))
         depths.append(depth)
         all_x.extend(x.tolist()); all_values.extend(values.tolist())
         handles.append(_handle(key, color, linewidth=width, marker=marker,
                                size=style.get("size", cfg.marker_size),
                                edgecolor=style.get("edgecolor", color),
                                linestyle=style.get("linestyle", "-"), label=style.get("label", key)))
-    if polygons:
-        collection = PolyCollection(polygons, facecolors=facecolors, edgecolors=facecolors,
-                                     linewidths=.85, alpha=opts.get("fill_alpha", .82))
-        ax.add_collection3d(collection, zs=depths, zdir="y")
+    anchor_x = min(all_x)/2 + max(all_x)/2
+    for vertices, depth, color, lines in filled_profiles:
+        collection = _WaterfallProfile3D(
+            vertices, (anchor_x, depth, payload["baseline"]), lines,
+            facecolors=[color], edgecolors="none", linewidths=0,
+            alpha=opts.get("fill_alpha", 1),
+        )
+        ax.add_collection3d(collection)
     ax.auto_scale_xyz(all_x, depths, all_values)
     ax.set_yticks(depths, labels=[str(_alias(item["group"], opts)) for item in profiles])
     _configure(ax, sp, cfg, (mapping["x"], mapping["group"], mapping["y"]))

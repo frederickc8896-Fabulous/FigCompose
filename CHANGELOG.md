@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Make native `waterfall3d` fills opaque by default. Draw each depth plane's
+  fill, outline and markers together so rear profiles stay behind nearer fills
+  as the camera changes. Explicit `fill_alpha` and `fill=False` remain available.
+  Native profile lines can still be edited or removed before subsequent exports.
+
 ## 0.3.0 — 2026-11-09
 
 - Add native `participant_tracks`, `clustered_heatmap` and `alluvial` chart kinds,

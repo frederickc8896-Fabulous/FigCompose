@@ -136,7 +136,7 @@ def compute_scatter3d(df, mapping, *, projections=None, projection_lines=None,
 
 
 def compute_waterfall3d(df, mapping, *, baseline=None, aggregate=None, order=None,
-                        depth_spacing=1, fill=True, fill_alpha=.82, linewidth=None,
+                        depth_spacing=1, fill=True, fill_alpha=1, linewidth=None,
                         markers=False, **view):
     validate_view(**view)
     baseline = _number(baseline, "waterfall3d baseline (explicit)")
