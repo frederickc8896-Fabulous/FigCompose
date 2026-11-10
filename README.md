@@ -126,7 +126,8 @@ For more complex settings, give your assistant the [API reference](https://githu
 
 ## Ready-to-run examples
 
-Download or clone the example folders, install `FigCompose>=0.3.0`, and run a complete example. Each folder includes its actual CSV, saved style, code and expected image.
+Download or clone the complete `examples/` directory, keeping its shared `_export.py`,
+install `FigCompose>=0.3.0`, and run a complete example. Each example folder includes its actual CSV, saved style, code and expected image.
 
 | Start here | What you can reproduce |
 |---|---|
