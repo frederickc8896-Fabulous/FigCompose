@@ -4,6 +4,7 @@ include README.zh-CN.md
 include REFERENCE.md
 include CHANGELOG.md
 recursive-include data_visuals/themes *.json
+recursive-include data_visuals/assets/fonts/tinos *.ttf *.txt *.json *.md
 recursive-include examples *.py *.csv *.yaml *.yml *.json *.md *.png *.svg
 
 prune .agents

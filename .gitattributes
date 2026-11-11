@@ -12,3 +12,7 @@
 *.csv -text
 *.png binary
 *.pdf binary
+
+# Preserve upstream font/license checksums, including the OFL's original spaces.
+*.ttf binary
+data_visuals/assets/fonts/tinos/OFL.txt -text whitespace=-blank-at-eol

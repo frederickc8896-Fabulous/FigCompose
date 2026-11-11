@@ -22,6 +22,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from data_visuals.themes import load_theme, get_color_palette
 from data_visuals.utils.colors import get_color_preset, SEQUENTIAL_SCHEMES
 from data_visuals.renderer.mpl.presentation import blend, readable_text_color
+from data_visuals.renderer.mpl.fonts import register_tinos
 from data_visuals.core.typography import normalize_font_sizes
 
 
@@ -177,13 +178,16 @@ class MplConfig:
         available = {f.name for f in fm.fontManager.ttflist}
         for name in raw_family.split(","):
             name = name.strip().strip("'").strip('"')
+            if name.casefold() == "tinos":
+                return register_tinos()
             if name in available:
                 return name
-        # Matplotlib bundles STIXGeneral. Prefer this compact serif before
-        # the generic fallback when the requested system Times font is absent.
+        # Keep the requested Times family as the default while supplying a
+        # Times-compatible font on systems without it. Explicit choices above
+        # retain priority, including an available user-specified fallback.
         primary = raw_family.split(",")[0].strip().strip("'").strip('"')
-        if primary.casefold() == "times new roman" and "STIXGeneral" in available:
-            return "STIXGeneral"
+        if primary.casefold() == "times new roman":
+            return register_tinos()
         # Fallback: return the generic category (last part) or 'serif'
         generic = raw_family.split(",")[-1].strip()
         return generic if generic in ("serif", "sans-serif", "monospace") else "serif"
