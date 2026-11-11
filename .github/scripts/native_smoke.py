@@ -13,6 +13,7 @@ import sys
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 from matplotlib.colors import to_hex
 import pandas as pd
 import numpy as np
@@ -88,9 +89,28 @@ def run_native_smoke(output, *, checkout=None, only_kinds=None):
     for name in ("general", "modern", "showcase"):
         theme = resources.files("data_visuals.themes").joinpath(name + ".json")
         assert json.loads(theme.read_text(encoding="utf-8"))["name"] == name
+    # Exercise files from the installed distribution, including every face.
+    # This keeps release verification independent of system Times/Tinos fonts.
+    assert MplConfig._resolve_font("Tinos") == "Tinos"
+    font_root = resources.files("data_visuals").joinpath("assets", "fonts", "tinos")
+    assert "SIL OPEN FONT LICENSE Version 1.1" in font_root.joinpath("OFL.txt").read_text(encoding="utf-8")
+    tinos_faces = {}
+    for style, weight, filename in (
+        ("normal", "normal", "Tinos-Regular.ttf"),
+        ("normal", "bold", "Tinos-Bold.ttf"),
+        ("italic", "normal", "Tinos-Italic.ttf"),
+        ("italic", "bold", "Tinos-BoldItalic.ttf"),
+    ):
+        actual = Path(font_manager.findfont(
+            font_manager.FontProperties(family="Tinos", style=style, weight=weight),
+            fallback_to_default=False,
+        )).resolve()
+        expected = Path(str(font_root.joinpath(filename))).resolve()
+        assert actual == expected, (actual, expected)
+        tinos_faces[filename] = actual.name
     resolved = MplConfig("showcase", physical=True, font_sizes={"main_title": 17, "tick": 9.5})
     assert resolved.showcase and resolved.font_sizes["main_title"] == 17 and resolved.font_sizes["tick"] == 9.5
-    config = FigureConfig(font_family="DejaVu Serif", legend={"visible": False})
+    config = FigureConfig(font_family="Tinos", legend={"visible": False})
     results = []
     for kind, data, declaration in declarations():
         if only_kinds is not None and kind not in only_kinds:
@@ -99,7 +119,7 @@ def run_native_smoke(output, *, checkout=None, only_kinds=None):
         chord_colors = {"A": "#112233", "B": "#445566", "C": "#778899"}
         if kind == "chord":
             declaration = {**declaration, "labels": {"A": "Alpha", "B": "Beta", "C": "Gamma"}}
-            chart_config = FigureConfig(font_family="DejaVu Serif", legend={"visible": False},
+            chart_config = FigureConfig(font_family="Tinos", legend={"visible": False},
                                         category_colors={"source": chord_colors})
         paper = plot(data, plots=[{**declaration, "title": None}], config=chart_config,
                      canvas={"width": 180}, style="showcase", palette="curated-10-vibrant")
@@ -137,6 +157,7 @@ def run_native_smoke(output, *, checkout=None, only_kinds=None):
               "versions": {"python": sys.version.split()[0], "matplotlib": matplotlib.__version__,
                            "numpy": np.__version__, "pandas": pd.__version__, "scipy": scipy.__version__},
               "strict_figure_spec_json": True, "showcase_resources_and_explicit_fonts": True,
+              "bundled_tinos_faces": tinos_faces,
               "circular_top_summary_is_native": any(item["kind"] == "circular_bar" for item in results),
               "chord_alias_actual_colors_checked": any(item["kind"] == "chord" for item in results)}
     (output / "native_smoke.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
