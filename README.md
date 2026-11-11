@@ -34,13 +34,13 @@ When results change, reuse the same visual settings with less manual adjustment.
 Requires Python 3.10+:
 
 ```bash
-python -m pip install "FigCompose>=0.3.0"
+python -m pip install "FigCompose>=0.3.1"
 ```
 
 The package is named **FigCompose**; Python imports use `data_visuals`.
-**FigCompose 0.3.0** includes **22 native chart types**, all 13 curated palettes and the `general`, `modern` and `showcase` styles. Upgrade older installations with `python -m pip install --upgrade "FigCompose>=0.3.0"`.
+**FigCompose 0.3.1** includes **22 native chart types**, all 13 curated palettes and the `general`, `modern` and `showcase` styles. Upgrade older installations with `python -m pip install --upgrade "FigCompose>=0.3.1"`.
 The hero image above demonstrates 11 chart types; the full set also includes distribution, paired-data, chord, 3D, participant-track, clustered-heatmap and alluvial charts.
-The default font is **Times New Roman**, supplied by your system. If it is unavailable, FigCompose prefers Matplotlib's bundled **STIXGeneral**, then the generic `serif` fallback. Math expressions use STIX by default.
+The default font is **Times New Roman**, supplied by your system. Starting in **0.3.1**, FigCompose bundles **Tinos** in regular, bold, italic and bold italic, and loads it automatically when Times New Roman is unavailable. Available fonts explicitly listed in `font_family` take priority; math expressions still use STIX. Tinos is an independent Times-compatible font; Chinese text needs a font with Chinese glyphs.
 
 <details>
 <summary>Install the latest source or update an existing installation</summary>
@@ -63,7 +63,7 @@ python -m pip install -e .
 Update a PyPI installation:
 
 ```bash
-python -m pip install --upgrade "FigCompose>=0.3.0"
+python -m pip install --upgrade "FigCompose>=0.3.1"
 ```
 
 </details>
@@ -127,7 +127,7 @@ For more complex settings, give your assistant the [API reference](https://githu
 ## Ready-to-run examples
 
 Download or clone the complete `examples/` directory, keeping its shared `_export.py`,
-install `FigCompose>=0.3.0`, and run a complete example. Each example folder includes its actual CSV, saved style, code and expected image.
+install `FigCompose>=0.3.1`, and run a complete example. Each example folder includes its actual CSV, saved style, code and expected image.
 
 | Start here | What you can reproduce |
 |---|---|
@@ -140,7 +140,7 @@ Run, for example, `python examples/circular_scores/generate.py --out output/circ
 
 ## Supported charts
 
-FigCompose 0.3.0 supports the following 22 native `kind` values.
+FigCompose 0.3.1 supports the following 22 native `kind` values.
 
 | Chart | `kind` | Common uses |
 |---|---|---|
@@ -213,7 +213,8 @@ FigCompose is currently in Alpha; interfaces are still evolving.
 
 ## License
 
-FigCompose is licensed under the [Apache License 2.0](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/LICENSE).
+FigCompose source code is licensed under the [Apache License 2.0](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/LICENSE).
+The bundled Tinos fonts retain their own [SIL Open Font License 1.1](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/data_visuals/assets/fonts/tinos/OFL.txt).
 
 ## Color catalog
 

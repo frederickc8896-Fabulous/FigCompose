@@ -2,9 +2,9 @@
 
 [English overview](README.md) · [中文概览](README.zh-CN.md) · [Runnable examples](examples/README.md)
 
-Import from `data_visuals`. **FigCompose 0.3.0** provides **22 native kinds**, 13 curated
+Import from `data_visuals`. **FigCompose 0.3.1** provides **22 native kinds**, 13 curated
 palettes and the `general`, `modern` and `showcase` styles. Install or upgrade with
-`python -m pip install --upgrade "FigCompose>=0.3.0"`.
+`python -m pip install --upgrade "FigCompose>=0.3.1"`.
 
 [Customization](#defaults-and-customization) · [Charts](#data-and-chart-behavior) · [Configuration](#paper-configuration) · [Canvas](#canvas-and-axes) · [Legends](#legends) · [Advanced charts](#advanced-chart-options) · [Checks](#figure-checks-and-layout-snapshots)
 
@@ -116,9 +116,14 @@ grow or shrink fonts: insufficient space raises `LayoutError`. PNG DPI only chan
 Physical defaults in pt are main title/panel title/axis label/tick/legend:
 **11/9/8/7/8** for paper styles, **22/11/9/8/10** for `showcase`.
 Override roles through `font_sizes`; explicit legend sizes take priority for legends.
-The default font is Times New Roman. When it is unavailable, the fallback prefers
-Matplotlib's bundled STIXGeneral, then generic `serif`. Available fonts explicitly
-listed in `font_family` take priority over this fallback. Math expressions use STIX by default.
+The default font is system Times New Roman. Since 0.3.1, FigCompose automatically
+loads bundled Tinos (regular, bold, italic and bold italic) when it is unavailable.
+Available fonts explicitly listed in `font_family` take priority. Math expressions
+still use STIX. Tinos is an independent Times-compatible font; Chinese labels need
+a font with Chinese glyphs.
+PNG renders the selected font into pixels, and PDF embeds it. Default SVG keeps
+editable text, so its viewer needs the font too. To export portable SVG outlines,
+save the rendered Matplotlib Figure inside `matplotlib.rc_context({"svg.fonttype": "path"})`.
 
 | Axis option in `chart_opts` | Purpose |
 |---|---|

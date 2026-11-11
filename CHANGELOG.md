@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 — 2026-11-11
 
+- Bundle Tinos regular, bold, italic and bold italic under SIL OFL 1.1, and load
+  them automatically when system Times New Roman is unavailable. Preserve
+  available explicit font choices and the default STIX math font.
 - Make native `waterfall3d` fills opaque by default. Draw each depth plane's
   fill, outline and markers together so rear profiles stay behind nearer fills
   as the camera changes. Explicit `fill_alpha` and `fill=False` remain available.

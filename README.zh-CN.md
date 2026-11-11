@@ -34,13 +34,13 @@
 需要 Python 3.10+：
 
 ```bash
-python -m pip install "FigCompose>=0.3.0"
+python -m pip install "FigCompose>=0.3.1"
 ```
 
 包名为 **FigCompose**，Python 导入使用 `data_visuals`。
-**FigCompose 0.3.0** 包含 **22 种原生图表**、全部 13 套精选配色及 `general`、`modern`、`showcase` 三种风格。旧安装可用 `python -m pip install --upgrade "FigCompose>=0.3.0"` 更新。
+**FigCompose 0.3.1** 包含 **22 种原生图表**、全部 13 套精选配色及 `general`、`modern`、`showcase` 三种风格。旧安装可用 `python -m pip install --upgrade "FigCompose>=0.3.1"` 更新。
 上方首屏组图实际展示 11 种图表；完整图种还包括分布、配对、弦图、三维图、环形多轨、环形聚类热图与多阶段流图。
-默认字体为 **Times New Roman**，由系统提供。缺少时优先使用 Matplotlib 自带的 **STIXGeneral**，再使用通用 `serif` 回退；数学公式默认仍使用 STIX。
+默认字体为 **Times New Roman**，由系统提供。自 **0.3.1** 起内置 **Tinos** 的常规、粗体、斜体和粗斜体，缺少 Times New Roman 时自动加载，无需安装系统字体。`font_family` 中显式列出的可用字体仍优先，数学公式仍使用 STIX。Tinos 是独立的 Times 兼容字体；中文需另选含中文字形的字体。
 
 <details>
 <summary>安装最新源码或更新已有安装</summary>
@@ -63,7 +63,7 @@ python -m pip install -e .
 更新 PyPI 安装：
 
 ```bash
-python -m pip install --upgrade "FigCompose>=0.3.0"
+python -m pip install --upgrade "FigCompose>=0.3.1"
 ```
 
 </details>
@@ -126,7 +126,7 @@ fig.render("figure.png", dpi=300)
 
 ## 可直接复现的示例
 
-下载或克隆完整 `examples/` 目录，保留公共文件 `_export.py`，安装 `FigCompose>=0.3.0` 后即可运行完整示例。每个示例目录包含实际 CSV、风格配置、脚本和预期成图。
+下载或克隆完整 `examples/` 目录，保留公共文件 `_export.py`，安装 `FigCompose>=0.3.1` 后即可运行完整示例。每个示例目录包含实际 CSV、风格配置、脚本和预期成图。
 
 | 从这里开始 | 可以复现什么 |
 |---|---|
@@ -139,7 +139,7 @@ fig.render("figure.png", dpi=300)
 
 ## 支持哪些图
 
-FigCompose 0.3.0 支持下列 22 个原生 `kind`。
+FigCompose 0.3.1 支持下列 22 个原生 `kind`。
 
 | 图种 | `kind` | 常见用法 |
 |---|---|---|
@@ -212,7 +212,8 @@ FigCompose 当前为 Alpha，接口仍在迭代。
 
 ## 许可证
 
-FigCompose 采用 [Apache License 2.0](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/LICENSE) 许可证。
+FigCompose 源码采用 [Apache License 2.0](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/LICENSE) 许可证。
+包内 Tinos 字体保留独立的 [SIL Open Font License 1.1](https://github.com/frederickc8896-Fabulous/FigCompose/blob/main/data_visuals/assets/fonts/tinos/OFL.txt) 许可证。
 
 ## 配色色卡
 

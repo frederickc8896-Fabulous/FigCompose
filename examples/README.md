@@ -1,22 +1,25 @@
 # Reproducible FigCompose examples / 可复现示例
 
-Install **`FigCompose>=0.3.0`**, download or clone the complete `examples/` directory
+Install **`FigCompose>=0.3.1`**, download or clone the complete `examples/` directory
 including its shared `_export.py`, then run a generator.
 Each example includes its actual CSV, a reusable `style.yaml`, the complete script and a preview.
-FigCompose 0.3.0 includes 22 native kinds, 13 curated palettes and the `general`, `modern`
+FigCompose 0.3.1 includes 22 native kinds, 13 curated palettes and the `general`, `modern`
 and `showcase` styles, including native circular summary placement.
 The updated [2D/3D comparison](three_dimensional_views/README.md), [circular scores](circular_scores/README.md),
 [native chord](chord_connections/README.md) and [six-view distribution series](intervals/README.md)
 use native declarations and reusable presentation rules.
 Participant tracks, circular clustering and alluvial flows use the native
 `participant_tracks`, `clustered_heatmap` and `alluvial` kinds included in this release.
+Since 0.3.1, missing system Times New Roman fonts automatically use bundled Tinos,
+and opaque waterfall profiles keep rear outlines behind nearer fills.
 
-安装 **`FigCompose>=0.3.0`**，下载或克隆示例目录后运行脚本。FigCompose 0.3.0包含22种原生图、13套精选配色和 `general`、`modern`、`showcase` 三种风格。
+安装 **`FigCompose>=0.3.1`**，下载或克隆示例目录后运行脚本。FigCompose 0.3.1包含22种原生图、13套精选配色和 `general`、`modern`、`showcase` 三种风格。
 下载时保留完整 `examples/` 目录及公共文件 `_export.py`。每个示例包含实际 CSV、统一风格配置、完整代码和预期效果；无需本地 demo 或开发目录。
 环形多轨、环形聚类和多阶段流图均使用此版本已包含的标准入口。
+自0.3.1起，缺少系统Times New Roman时自动使用包内Tinos，实色瀑布图按深度遮挡后方轮廓。
 
 ```bash
-python -m pip install "FigCompose>=0.3.0"
+python -m pip install "FigCompose>=0.3.1"
 python examples/mixed_figure/generate.py
 python examples/intervals/generate.py
 python examples/intervals/generate_series.py

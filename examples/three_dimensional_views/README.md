@@ -20,15 +20,13 @@ Three 245 × 160 mm pairwise slides are exported alongside the six-panel overvie
 [stacks](stacks/preview.png). Each slide preserves its exact source rows and domains.
 
 ```bash
-python -m pip install "FigCompose>=0.3.0"
+python -m pip install "FigCompose>=0.3.1"
 python examples/three_dimensional_views/generate.py
 python examples/three_dimensional_views/generate.py --view projections --out output/projections
 ```
 
-Use FigCompose 0.3.0 or later for this native 2D/3D comparison.
-The opaque-waterfall occlusion fix is currently available in the source checkout;
-install it from the repository root with `python -m pip install -e .` to reproduce
-the updated waterfall outlines and depth ordering.
+Use FigCompose 0.3.1 or later for this native 2D/3D comparison, including the
+opaque-waterfall occlusion fix and the updated outline depth ordering.
 All six panels now use native FigCompose declarations: `line`, `scatter`, `bar`,
 `waterfall3d`, `scatter3d` and `bar3d`. They share one canvas, fonts and preset
 colors through the reusable `showcase` style. No callbacks, manual Axes or
